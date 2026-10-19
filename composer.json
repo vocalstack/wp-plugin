@@ -1,0 +1,48 @@
+{
+    "name": "vocalstack/wp-plugin",
+    "description": "VocalStack for WordPress: transcribe audio and video in the Media Library.",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "require": {
+        "php": ">=8.1",
+        "vocalstack/sdk": "^1.0"
+    },
+    "require-dev": {
+        "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+        "phpcompatibility/phpcompatibility-wp": "^2.1",
+        "phpunit/phpunit": "^9.6",
+        "wp-coding-standards/wpcs": "^3.1",
+        "yoast/phpunit-polyfills": "^2.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "VocalStack\\WP\\": "src/"
+        }
+    },
+    "scripts": {
+        "lint": "phpcs",
+        "lint:fix": "phpcbf"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        },
+        "platform": {
+            "php": "8.1.0"
+        }
+    },
+    "extra": {
+        "strauss": {
+            "target_directory": "vendor-prefixed",
+            "namespace_prefix": "VocalStack\\WP\\Vendor\\",
+            "classmap_prefix": "VocalStack_WP_Vendor_",
+            "constant_prefix": "VOCALSTACK_WP_VENDOR_",
+            "packages": [
+                "vocalstack/sdk"
+            ],
+            "update_call_sites": false,
+            "delete_vendor_packages": true
+        }
+    }
+}

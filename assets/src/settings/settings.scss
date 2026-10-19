@@ -1,0 +1,186 @@
+// The page header: the VocalStack logo.
+.vocalstack-page__header {
+	margin: 20px 0 8px;
+}
+
+.vocalstack-page__logo {
+	display: block;
+	width: 220px;
+	height: auto;
+}
+
+.vocalstack-settings {
+	max-width: 960px;
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	margin-top: 16px;
+
+	h2 {
+		margin: 0;
+		font-size: 14px;
+	}
+
+	.components-card__body > * + * {
+		margin-top: 16px;
+	}
+
+	&__tabs .components-tab-panel__tabs {
+		border-bottom: 1px solid #dcdcde;
+		margin-bottom: 16px;
+	}
+
+	&__panel {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+	}
+
+	&__table {
+		margin-top: 8px;
+
+		td:first-child {
+			white-space: nowrap;
+		}
+	}
+
+	&__row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 12px;
+		align-items: center;
+
+		// A field and its button line up at the bottom, under the field's label.
+		&.has-field {
+			align-items: flex-end;
+		}
+
+		.components-base-control {
+			flex: 1 1 280px;
+		}
+	}
+}
+
+.vocalstack-balance {
+	.components-card__header {
+		justify-content: space-between;
+	}
+
+	&__stats {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+		gap: 16px;
+	}
+
+	&__stat {
+		padding: 16px;
+		border: 1px solid #dcdcde;
+		border-radius: 4px;
+	}
+
+	&__label {
+		font-size: 12px;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		color: #50575e;
+	}
+
+	&__value {
+		margin-top: 6px;
+		font-size: 32px;
+		line-height: 1.1;
+		font-weight: 400;
+		font-variant-numeric: tabular-nums;
+	}
+
+	&__unit {
+		margin-left: 6px;
+		font-size: 14px;
+		color: #50575e;
+	}
+
+	&__help {
+		margin-top: 4px;
+		color: #646970;
+	}
+}
+
+.vocalstack-media {
+	&__toolbar {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 12px;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 12px;
+
+		.subsubsub {
+			float: none;
+			margin: 0;
+		}
+
+		.components-search-control {
+			min-width: 220px;
+		}
+	}
+
+	&__table {
+		td {
+			vertical-align: middle;
+		}
+
+		.vocalstack-media__play,
+		.vocalstack-media__play-head {
+			width: 36px;
+			padding-right: 0;
+		}
+
+		tr.is-playing td {
+			background: #f0f6fc;
+		}
+	}
+
+	&__status {
+		color: #646970;
+
+		&.is-done {
+			color: #00a32a;
+		}
+
+		&.is-failed {
+			color: #d63638;
+			cursor: help;
+		}
+
+		progress {
+			width: 80px;
+			vertical-align: middle;
+		}
+	}
+
+	&__actions {
+		text-align: right;
+		white-space: nowrap;
+
+		.components-button + .components-button {
+			margin-left: 8px;
+		}
+	}
+
+	&__footer {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 12px;
+		align-items: center;
+		justify-content: space-between;
+		margin-top: 12px;
+		color: #646970;
+	}
+
+	&__pager {
+		display: flex;
+		gap: 8px;
+		align-items: center;
+	}
+}

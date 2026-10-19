@@ -1,0 +1,22 @@
+# What a WordPress.org release leaves out (the build script and the deploy action read this).
+/.git
+/.github
+/.claude
+/.wordpress-org
+/node_modules
+/tests
+/docs
+/scripts
+/dist
+.distignore
+.gitignore
+.wp-env.json
+.wp-env.override.json
+.phpunit.result.cache
+phpcs.xml.dist
+phpunit.xml.dist
+composer.lock
+package-lock.json
+README.md
+.DS_Store
+/LICENSE

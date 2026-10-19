@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<ruleset name="VocalStack">
+	<file>vocalstack.php</file>
+	<file>uninstall.php</file>
+	<file>src</file>
+	<file>blocks</file>
+	<file>templates</file>
+	<exclude-pattern>*/build/*</exclude-pattern>
+	<exclude-pattern>*.js</exclude-pattern>
+	<arg name="extensions" value="php"/>
+	<arg value="sp"/>
+	<config name="testVersion" value="8.1-"/>
+	<config name="minimum_wp_version" value="6.6"/>
+	<rule ref="PHPCompatibilityWP"/>
+	<rule ref="WordPress">
+		<!-- PSR-4 class files under src/. -->
+		<exclude name="WordPress.Files.FileName"/>
+	</rule>
+	<rule ref="WordPress.WP.I18n">
+		<properties>
+			<property name="text_domain" type="array" value="vocalstack"/>
+		</properties>
+	</rule>
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<properties>
+			<property name="prefixes" type="array" value="vocalstack,VocalStack"/>
+		</properties>
+	</rule>
+</ruleset>

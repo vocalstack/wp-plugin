@@ -1,0 +1,10 @@
+/vendor/
+/node_modules/
+/build/
+.phpunit.result.cache
+.wp-env.override.json
+*.zip
+.DS_Store
+/.claude/
+/dist/
+/vendor-prefixed/

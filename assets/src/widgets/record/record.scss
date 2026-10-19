@@ -1,0 +1,76 @@
+/** Record widget. Custom properties come from base.scss. */
+
+:where(.vocalstack-record__controls) {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: var(--vocalstack-gap);
+}
+
+:where(.vocalstack-record__field) {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25em;
+	min-width: 12rem;
+	flex: 1 1 12rem;
+}
+
+:where(.vocalstack-record__field-label) {
+	font-size: 0.8em;
+	color: var(--vocalstack-muted);
+}
+
+:where(.vocalstack-button--record) {
+	border-color: var(--vocalstack-record);
+	background: var(--vocalstack-record);
+	color: #fff;
+}
+
+:where(.vocalstack-record__dot) {
+	width: 0.7em;
+	height: 0.7em;
+	border-radius: 50%;
+	background: currentColor;
+	flex: none;
+}
+
+:where(.vocalstack-widget[data-state="recording"] .vocalstack-record__dot) {
+	border-radius: 2px;
+	animation: vocalstack-blink 1.2s ease-in-out infinite;
+}
+
+:where(.vocalstack-widget[data-state="recording"] .vocalstack-button--record, .vocalstack-widget[data-state="stopping"] .vocalstack-button--record) {
+	background: transparent;
+	color: var(--vocalstack-record);
+}
+
+:where(.vocalstack-record__timer) {
+	align-self: center;
+	font-family: var(--vocalstack-mono);
+	font-variant-numeric: tabular-nums;
+	color: var(--vocalstack-muted);
+}
+
+:where(.vocalstack-record__meter) {
+	height: 4px;
+	border-radius: 2px;
+	background: var(--vocalstack-border);
+	overflow: hidden;
+}
+
+:where(.vocalstack-record__level) {
+	display: block;
+	height: 100%;
+	width: 100%;
+	background: var(--vocalstack-record);
+	transform-origin: left center;
+	transform: scaleX(var(--vocalstack-level, 0));
+	transition: transform 0.08s linear;
+}
+
+@keyframes vocalstack-blink {
+
+	50% {
+		opacity: 0.3;
+	}
+}

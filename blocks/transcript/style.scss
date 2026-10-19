@@ -1,0 +1,39 @@
+.vocalstack-transcript {
+	&__player {
+		display: block;
+		width: 100%;
+		margin-bottom: 1em;
+	}
+
+	&__speaker {
+		font-weight: 600;
+		margin-right: 0.25em;
+	}
+
+	&__time {
+		font: inherit;
+		font-size: 0.85em;
+		font-variant-numeric: tabular-nums;
+		color: inherit;
+		opacity: 0.7;
+		background: none;
+		border: 0;
+		padding: 0;
+		margin-right: 0.25em;
+		cursor: pointer;
+	}
+
+	&.is-linked &__sentence {
+		cursor: pointer;
+		border-radius: 2px;
+	}
+
+	&.is-linked &__sentence:hover {
+		text-decoration: underline;
+		text-decoration-thickness: 1px;
+	}
+
+	&__sentence.is-current {
+		background: color-mix(in srgb, currentColor 14%, transparent);
+	}
+}

@@ -1,0 +1,32 @@
+.vocalstack-panel {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	align-items: flex-start;
+
+	.components-base-control,
+	textarea {
+		width: 100%;
+	}
+
+	&__progress {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		align-items: center;
+		width: 100%;
+
+		progress {
+			flex: 1 1 160px;
+		}
+	}
+
+	&__actions {
+		display: flex;
+		gap: 8px;
+	}
+
+	.description {
+		margin: 0;
+	}
+}

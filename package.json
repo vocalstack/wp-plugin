@@ -1,0 +1,24 @@
+{
+  "name": "vocalstack-wp-plugin",
+  "private": true,
+  "license": "GPL-2.0-or-later",
+  "scripts": {
+    "build": "npm run build:admin && npm run build:widgets && npm run build:blocks",
+    "build:admin": "wp-scripts build media-panel=./assets/src/media-panel/index.js settings=./assets/src/settings/index.js player=./assets/src/player/index.js editor=./assets/src/editor/index.js --output-path=build/admin",
+    "build:widgets": "wp-scripts build base=./assets/src/widgets/base/index.js player=./assets/src/widgets/player/index.js record=./assets/src/widgets/record/index.js upload=./assets/src/widgets/upload/index.js --output-path=build/widgets",
+    "build:blocks": "wp-scripts build --webpack-src-dir=blocks --output-path=build/blocks --webpack-copy-php",
+    "start:admin": "wp-scripts start media-panel=./assets/src/media-panel/index.js settings=./assets/src/settings/index.js player=./assets/src/player/index.js editor=./assets/src/editor/index.js --output-path=build/admin",
+    "start:widgets": "wp-scripts start base=./assets/src/widgets/base/index.js player=./assets/src/widgets/player/index.js record=./assets/src/widgets/record/index.js upload=./assets/src/widgets/upload/index.js --output-path=build/widgets",
+    "start:blocks": "wp-scripts start --webpack-src-dir=blocks --output-path=build/blocks --webpack-copy-php",
+    "lint:js": "wp-scripts lint-js assets/src blocks",
+    "lint:php": "composer lint",
+    "env:start": "wp-env start",
+    "env:stop": "wp-env stop",
+    "test:php": "wp-env run tests-cli --env-cwd=wp-content/plugins/wp-plugin vendor/bin/phpunit"
+  },
+  "devDependencies": {
+    "@wordpress/env": "^10.0.0",
+    "@wordpress/icons": "^18.0.0",
+    "@wordpress/scripts": "^30.0.0"
+  }
+}

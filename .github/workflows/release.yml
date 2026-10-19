@@ -1,0 +1,108 @@
+# Test, build and publish the plugin.
+#
+# - Every push to main: tests, then the release build, attached to the run as
+#   the "vocalstack" artifact (the zip for WordPress.org's first review), then
+#   WordPress.org's Plugin Check on that build.
+# - A version tag (v0.2.0): the same, then, if Plugin Check passed, that build
+#   is published to WordPress.org's SVN
+#   (trunk, the version tag, and the directory assets in .wordpress-org/).
+#   Needs the SVN_USERNAME and SVN_PASSWORD secrets, which exist once
+#   WordPress.org has approved the plugin.
+name: Release
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: shivammathur/setup-php@2.37.2
+        with:
+          php-version: '8.2'
+          tools: composer:v2
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: '22'
+          cache: npm
+      - run: composer install --no-interaction --no-progress
+      - run: npm ci
+      - run: npm run build
+      - run: vendor/bin/phpcs -q
+      - run: npx wp-env start
+      - run: npx wp-env run tests-cli --env-cwd=wp-content/plugins/$(basename "$PWD") vendor/bin/phpunit
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: shivammathur/setup-php@2.37.2
+        with:
+          php-version: '8.1'
+          tools: composer:v2
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: bash scripts/build-release.sh
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: vocalstack
+          # The folder, so the download unzips to vocalstack/ as WordPress expects.
+          path: |
+            dist/
+            !dist/*.zip
+          if-no-files-found: error
+
+  plugin-check:
+    # WordPress.org's own checks, on exactly the build that would be published.
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8.0.1
+        with:
+          name: vocalstack
+          path: release
+      - uses: WordPress/plugin-check-action@v1.1.9
+        with:
+          build-dir: release/vocalstack
+          include-experimental: true
+          include-low-severity-errors: true
+          include-low-severity-warnings: true
+
+  deploy:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [ build, plugin-check ]
+    runs-on: ubuntu-latest
+    environment: wordpress.org
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: The tag, the plugin and the readme agree on the version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          plugin=$(sed -n 's/^ \* Version: *//p' vocalstack.php | tr -d '[:space:]')
+          stable=$(sed -n 's/^Stable tag: *//p' readme.txt | tr -d '[:space:]')
+          echo "tag $tag, plugin $plugin, readme $stable"
+          [ "$tag" = "$plugin" ] && [ "$tag" = "$stable" ] || { echo "::error::Set Version in vocalstack.php and Stable tag in readme.txt to $tag"; exit 1; }
+      # Publish the very build Plugin Check passed, not a rebuild.
+      - uses: actions/download-artifact@v8.0.1
+        with:
+          name: vocalstack
+          path: dist
+      - uses: 10up/action-wordpress-plugin-deploy@2.3.0
+        env:
+          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+          SLUG: vocalstack
+          BUILD_DIR: dist/vocalstack
+          ASSETS_DIR: .wordpress-org

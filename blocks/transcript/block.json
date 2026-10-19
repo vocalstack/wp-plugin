@@ -1,0 +1,28 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "vocalstack/transcript",
+	"version": "0.1.0",
+	"title": "VocalStack Transcript",
+	"category": "media",
+	"icon": "media-text",
+	"description": "Show the transcript of an audio or video file, with click-to-seek timestamps.",
+	"keywords": [ "transcript", "captions", "podcast", "audio", "video" ],
+	"textdomain": "vocalstack",
+	"attributes": {
+		"mediaId": { "type": "integer", "default": 0 },
+		"showPlayer": { "type": "boolean", "default": false },
+		"showTimestamps": { "type": "boolean", "default": true },
+		"showSpeakers": { "type": "boolean", "default": true }
+	},
+	"supports": {
+		"html": false,
+		"align": [ "wide", "full" ],
+		"color": { "background": true, "text": true, "link": true },
+		"spacing": { "margin": true, "padding": true },
+		"typography": { "fontSize": true, "lineHeight": true }
+	},
+	"editorScript": "file:./index.js",
+	"style": "file:./style-index.css",
+	"render": "file:./render.php"
+}

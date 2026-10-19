@@ -1,0 +1,220 @@
+/**
+ * VocalStack widgets: shared look.
+ *
+ * Everything here is a custom property, and every selector sits in :where(),
+ * so a theme overrides any of it with a plain rule:
+ *
+ *     .vocalstack-widget { --vocalstack-accent: #b91c1c; --vocalstack-radius: 0; }
+ *
+ * The defaults follow the theme's presets (theme.json) where it has them.
+ */
+
+:where(.vocalstack-widget) {
+	position: relative;
+	--vocalstack-accent: var(--wp--preset--color--primary, var(--wp--preset--color--contrast, #245b8f));
+	--vocalstack-accent-text: var(--wp--preset--color--base, #fff);
+	--vocalstack-record: #ec634d;
+	--vocalstack-danger: #c0392b;
+	--vocalstack-text: currentColor;
+	--vocalstack-muted: color-mix(in srgb, currentColor 62%, transparent);
+	--vocalstack-surface: color-mix(in srgb, currentColor 4%, transparent);
+	--vocalstack-border: color-mix(in srgb, currentColor 16%, transparent);
+	--vocalstack-highlight: color-mix(in srgb, var(--vocalstack-accent) 20%, transparent);
+	--vocalstack-focus: var(--vocalstack-accent);
+	--vocalstack-radius: 8px;
+	--vocalstack-padding: 1rem;
+	--vocalstack-gap: 0.75rem;
+	--vocalstack-font: inherit;
+	--vocalstack-font-size: inherit;
+	--vocalstack-mono: var(--wp--preset--font-family--monospace, ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace);
+	--vocalstack-transcript-height: 24rem;
+
+	display: flex;
+	flex-direction: column;
+	gap: var(--vocalstack-gap);
+	box-sizing: border-box;
+	padding: var(--vocalstack-padding);
+	border: 1px solid var(--vocalstack-border);
+	border-radius: var(--vocalstack-radius);
+	color: var(--vocalstack-text);
+	font-family: var(--vocalstack-font);
+	font-size: var(--vocalstack-font-size);
+}
+
+:where(.vocalstack-widget *, .vocalstack-widget *::before, .vocalstack-widget *::after) {
+	box-sizing: inherit;
+}
+
+:where(.vocalstack-widget) :where(p) {
+	margin: 0;
+}
+
+:where(.vocalstack-sr-only) {
+	position: absolute !important;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
+:where(.vocalstack-widget [hidden]) {
+	display: none !important;
+}
+
+// Style variations (block "Styles" panel, or the shortcode's style="").
+:where(.vocalstack-widget.is-style-minimal) {
+	padding: 0;
+	border: 0;
+}
+
+:where(.vocalstack-widget.is-style-card) {
+	background: var(--vocalstack-surface);
+	box-shadow: 0 1px 2px color-mix(in srgb, currentColor 8%, transparent), 0 6px 18px color-mix(in srgb, currentColor 6%, transparent);
+}
+
+:where(.vocalstack-widget) :where([class$="__title"]) {
+	font-weight: 600;
+}
+
+:where(.vocalstack-widget) :where([class$="__notice"]) {
+	color: var(--vocalstack-muted);
+}
+
+:where(.vocalstack-widget) :where([class$="__status"]) {
+	color: var(--vocalstack-muted);
+	font-size: 0.9em;
+	min-height: 1.4em;
+}
+
+// An empty status line takes no room, but stays a live region (display:none would silence it).
+:where(.vocalstack-widget) :where([class$="__status"]:empty) {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	min-height: 0;
+	overflow: hidden;
+	clip-path: inset(50%);
+}
+
+:where(.vocalstack-widget) :where([class$="__status"].is-error) {
+	color: var(--vocalstack-danger);
+}
+
+// Buttons
+:where(.vocalstack-button) {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5em;
+	padding: 0.55em 1.1em;
+	border: 1px solid var(--vocalstack-accent);
+	border-radius: var(--vocalstack-radius);
+	background: var(--vocalstack-accent);
+	color: var(--vocalstack-accent-text);
+	font: inherit;
+	line-height: 1.2;
+	cursor: pointer;
+	text-decoration: none;
+	transition: filter 0.15s ease, background-color 0.15s ease;
+}
+
+:where(.vocalstack-button:hover) {
+	filter: brightness(1.08);
+}
+
+:where(.vocalstack-button:focus-visible, .vocalstack-widget select:focus-visible, .vocalstack-transcript__time:focus-visible, .vocalstack-upload__input:focus-visible + *) {
+	outline: 2px solid var(--vocalstack-focus);
+	outline-offset: 2px;
+}
+
+:where(.vocalstack-button:disabled, .vocalstack-button[aria-disabled="true"]) {
+	opacity: 0.55;
+	cursor: not-allowed;
+	filter: none;
+}
+
+:where(.vocalstack-button--secondary) {
+	background: transparent;
+	color: var(--vocalstack-accent);
+}
+
+:where(.vocalstack-widget select) {
+	font: inherit;
+	padding: 0.45em 0.6em;
+	border: 1px solid var(--vocalstack-border);
+	border-radius: var(--vocalstack-radius);
+	background: transparent;
+	color: inherit;
+	max-width: 100%;
+}
+
+// Transcript
+:where(.vocalstack-transcript) {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75em;
+	max-height: var(--vocalstack-transcript-height);
+	overflow-y: auto;
+	line-height: 1.6;
+	overscroll-behavior: contain;
+}
+
+:where(.vocalstack-transcript:empty) {
+	display: none;
+}
+
+:where(.vocalstack-transcript__paragraph) {
+	margin: 0;
+}
+
+:where(.vocalstack-transcript__speaker) {
+	display: block;
+	font-size: 0.8em;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	color: var(--vocalstack-muted);
+}
+
+:where(.vocalstack-transcript__time) {
+	margin: 0 0.35em 0 0;
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--vocalstack-muted);
+	font: inherit;
+	font-family: var(--vocalstack-mono);
+	font-size: 0.8em;
+	font-variant-numeric: tabular-nums;
+	cursor: pointer;
+}
+
+:where(.vocalstack-transcript.is-linked .vocalstack-transcript__sentence) {
+	cursor: pointer;
+	border-radius: 3px;
+}
+
+:where(.vocalstack-transcript.is-linked .vocalstack-transcript__sentence:hover) {
+	text-decoration: underline;
+	text-decoration-color: var(--vocalstack-border);
+}
+
+:where(.vocalstack-transcript__sentence.is-current) {
+	background: var(--vocalstack-highlight);
+	box-decoration-break: clone;
+	-webkit-box-decoration-break: clone;
+}
+
+:where(.vocalstack-transcript__draft) {
+	color: var(--vocalstack-muted);
+	font-style: italic;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+	:where(.vocalstack-widget *, .vocalstack-widget *::before, .vocalstack-widget *::after) {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+}

@@ -1,0 +1,78 @@
+/** Upload widget. Custom properties come from base.scss. */
+
+:where(.vocalstack-upload__drop) {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.5em;
+	padding: calc(var(--vocalstack-padding) * 1.5) var(--vocalstack-padding);
+	border: 2px dashed var(--vocalstack-border);
+	border-radius: var(--vocalstack-radius);
+	text-align: center;
+	transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+:where(.vocalstack-upload__drop.is-dragging) {
+	border-color: var(--vocalstack-accent);
+	background: var(--vocalstack-highlight);
+}
+
+:where(.vocalstack-upload__drop.is-busy) {
+	opacity: 0.6;
+	pointer-events: none;
+}
+
+// Visually hidden but focusable: the label is the visible control.
+:where(.vocalstack-upload__input) {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	opacity: 0;
+	overflow: hidden;
+	clip-path: inset(50%);
+}
+
+:where(.vocalstack-upload__prompt) {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5em;
+}
+
+:where(.vocalstack-upload__hint) {
+	color: var(--vocalstack-muted);
+	font-size: 0.85em;
+}
+
+:where(.vocalstack-upload__progress) {
+	display: flex;
+	align-items: center;
+	gap: var(--vocalstack-gap);
+}
+
+:where(.vocalstack-upload__bar) {
+	flex: 1;
+	height: 6px;
+	accent-color: var(--vocalstack-accent);
+}
+
+:where(.vocalstack-upload__progress-label) {
+	font-family: var(--vocalstack-mono);
+	font-size: 0.85em;
+	font-variant-numeric: tabular-nums;
+	color: var(--vocalstack-muted);
+}
+
+:where(.vocalstack-upload__result) {
+	display: flex;
+	flex-direction: column;
+	gap: var(--vocalstack-gap);
+}
+
+:where(.vocalstack-upload__media audio, .vocalstack-upload__media video) {
+	display: block;
+	width: 100%;
+	border-radius: var(--vocalstack-radius);
+}
