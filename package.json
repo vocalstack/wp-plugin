@@ -1,7 +1,7 @@
 {
   "name": "vocalstack-wp-plugin",
   "private": true,
-  "license": "GPL-2.0-or-later",
+  "license": "MIT",
   "scripts": {
     "build": "npm run build:admin && npm run build:widgets && npm run build:blocks",
     "build:admin": "wp-scripts build media-panel=./assets/src/media-panel/index.js settings=./assets/src/settings/index.js player=./assets/src/player/index.js editor=./assets/src/editor/index.js --output-path=build/admin",

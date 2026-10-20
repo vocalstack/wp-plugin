@@ -2,7 +2,7 @@
     "name": "vocalstack/wp-plugin",
     "description": "VocalStack for WordPress: transcribe audio and video in the Media Library.",
     "type": "wordpress-plugin",
-    "license": "GPL-2.0-or-later",
+    "license": "MIT",
     "require": {
         "php": ">=8.1",
         "vocalstack/sdk": "^1.0"
