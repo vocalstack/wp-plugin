@@ -2,6 +2,8 @@
 
 The VocalStack dashboard inside wp-admin, a Transcribe button on every audio and video file, and public widgets (players, record buttons, upload buttons) as blocks and shortcodes.
 
+Read more about the [VocalStack transcription and translation plugin for WordPress](https://vocalstack.com/wordpress-transcription-and-translation-plugin/) on the [VocalStack website](https://vocalstack.com/).
+
 Built on the PHP SDK [`vocalstack/sdk`](https://github.com/vocalstack/php-sdk). The API key stays on the server: browsers never receive it.
 
 ## In wp-admin: VocalStack (below Media)

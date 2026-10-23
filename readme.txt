@@ -19,6 +19,8 @@ VocalStack adds a Transcribe button to every audio and video file in your Media 
 * Videos get captions automatically.
 * Transcribe new uploads automatically, or only when you click.
 
+Read more about this plugin on the VocalStack website: https://vocalstack.com/wordpress-transcription-and-translation-plugin/
+
 == External services ==
 
 This plugin relies on VocalStack (https://vocalstack.com), a speech-to-text service, and needs a VocalStack account and API key. The key stays on your server; visitors' browsers never receive it.
