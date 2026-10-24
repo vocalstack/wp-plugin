@@ -15,15 +15,12 @@ use VocalStack\WP\Widgets\Widgets;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * A top-level VocalStack menu, just below Media. The page is a React app
+ * A top-level VocalStack menu, after the core menus. The page is a React app
  * (assets/src/settings) over the `settings` REST routes.
  */
 final class SettingsPage {
 
 	const SLUG = 'vocalstack';
-
-	/** Just below Media (10). */
-	const POSITION = 11;
 
 	/**
 	 * Hooks.
@@ -37,7 +34,7 @@ final class SettingsPage {
 	 * Add the menu.
 	 */
 	public static function menu(): void {
-		$hook = add_menu_page( __( 'VocalStack', 'vocalstack' ), __( 'VocalStack', 'vocalstack' ), Proxy::CAPABILITY, self::SLUG, array( self::class, 'render' ), self::icon(), self::POSITION );
+		$hook = add_menu_page( __( 'VocalStack', 'vocalstack' ), __( 'VocalStack', 'vocalstack' ), Proxy::CAPABILITY, self::SLUG, array( self::class, 'render' ), self::icon() );
 		add_action( "load-{$hook}", fn() => add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue' ) ) );
 	}
 

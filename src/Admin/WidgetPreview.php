@@ -68,6 +68,18 @@ final class WidgetPreview {
 			$html = '';
 		}
 
+		// The frame shows only the widget: no page margins or background. Last,
+		// so it comes after the theme's styles.
+		add_action(
+			'wp_enqueue_scripts',
+			function () {
+				wp_register_style( 'vocalstack-widget-preview', false, array(), VOCALSTACK_VERSION );
+				wp_enqueue_style( 'vocalstack-widget-preview' );
+				wp_add_inline_style( 'vocalstack-widget-preview', 'html,body{margin:0!important;padding:0;background:transparent}body{padding:4px}' );
+			},
+			PHP_INT_MAX
+		);
+
 		add_filter( 'show_admin_bar', '__return_false' );
 		nocache_headers();
 		header( 'X-Frame-Options: SAMEORIGIN' );
@@ -79,7 +91,6 @@ final class WidgetPreview {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 		<?php wp_head(); ?>
-<style>html,body{margin:0!important;padding:0;background:transparent}body{padding:4px}</style>
 </head>
 <body <?php body_class( 'vocalstack-widget-preview' ); ?>>
 		<?php

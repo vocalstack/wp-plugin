@@ -8,6 +8,7 @@
 namespace VocalStack\WP\Tests;
 
 use VocalStack\WP\Media;
+use VocalStack\WP\Rest\Proxy;
 use VocalStack\WP\Settings;
 use VocalStack\WP\Transcriber\TranscriberError;
 
@@ -108,7 +109,7 @@ final class RestTest extends TestCase {
 	}
 
 	public function test_the_media_list_shows_audio_and_video_only(): void {
-		$this->login( 'editor' );
+		$this->login( 'administrator' );
 		$audio = $this->audio();
 		$video = $this->audio( 'video/mp4' );
 		self::factory()->attachment->create_object(
@@ -129,7 +130,7 @@ final class RestTest extends TestCase {
 	}
 
 	public function test_the_media_list_filters_by_state(): void {
-		$this->login( 'editor' );
+		$this->login( 'administrator' );
 		$done = $this->audio();
 		Media::save_transcript( $done, $this->vs->transcript );
 		update_post_meta( $done, Media::STATE, 'done' );
@@ -148,5 +149,31 @@ final class RestTest extends TestCase {
 	public function test_subscribers_cannot_list_media(): void {
 		$this->login( 'subscriber' );
 		$this->assertSame( 403, $this->call( 'GET', '/media' )->get_status() );
+	}
+
+	public function test_editors_without_the_vocalstack_capability_cannot_list_media(): void {
+		$this->login( 'editor' );
+		$this->assertSame( 403, $this->call( 'GET', '/media' )->get_status() );
+	}
+
+	public function test_the_media_list_holds_only_the_users_own_files_unless_they_can_edit_others(): void {
+		$others = $this->audio();
+		$author = self::factory()->user->create( array( 'role' => 'author' ) );
+		get_userdata( $author )->add_cap( Proxy::CAPABILITY );
+		wp_set_current_user( $author );
+		$own = $this->audio();
+		wp_update_post(
+			array(
+				'ID'          => $own,
+				'post_author' => $author,
+			)
+		);
+
+		$response = $this->call( 'GET', '/media' );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( array( $own ), array_column( $response->get_data(), 'id' ) );
+		$this->assertNotContains( $others, array_column( $response->get_data(), 'id' ) );
+		$this->assertSame( '1', $response->get_headers()['X-WP-Total'] );
 	}
 }

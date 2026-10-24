@@ -9,6 +9,7 @@ namespace VocalStack\WP\Widgets;
 
 use VocalStack\Http\ConnectionException;
 use VocalStack\VocalStackException;
+use VocalStack\WP\Lock;
 use VocalStack\WP\Plugin;
 use VocalStack\WP\Rest\Routes;
 
@@ -263,11 +264,10 @@ final class RecordRoutes {
 	 * @param array<string, mixed> $recording The recording, as VocalStack has it.
 	 */
 	private static function settle( array $session, array $recording ): void {
-		$flag = 'vocalstack_settled_' . md5( $session['rec'] );
-		if ( get_transient( $flag ) ) {
+		// Never released: it outlives the session, after which nothing can settle it again.
+		if ( ! Lock::acquire( 'settled_' . md5( $session['rec'] ), max( DAY_IN_SECONDS, (int) $session['exp'] - time() ) ) ) {
 			return;
 		}
-		set_transient( $flag, 1, DAY_IN_SECONDS );
 		$actual = (int) ceil( (float) ( $recording['mediaDurationS'] ?? $session['reserved'] ) );
 		Policy::settle_minutes( (string) $session['who'], (int) $session['reserved'], $actual );
 	}

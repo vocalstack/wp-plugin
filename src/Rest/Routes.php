@@ -51,7 +51,7 @@ final class Routes {
 			array(
 				'methods'             => 'GET',
 				'callback'            => array( self::class, 'list_media' ),
-				'permission_callback' => fn() => current_user_can( 'upload_files' ),
+				'permission_callback' => array( self::class, 'can_list_media' ),
 				'args'                => array(
 					'page'     => array(
 						'type'    => 'integer',
@@ -174,14 +174,15 @@ final class Routes {
 	}
 
 	/**
-	 * Every audio and video attachment, newest first, filtered by transcript state.
+	 * The audio and video attachments the user may edit, newest first, filtered
+	 * by transcript state.
 	 *
 	 * @param \WP_REST_Request $request The request.
 	 */
 	public static function list_media( \WP_REST_Request $request ): \WP_REST_Response {
-		$args   = array(
+		$args = array(
 			'post_type'      => 'attachment',
-			'post_status'    => array( 'inherit', 'private' ),
+			'post_status'    => current_user_can( 'read_private_posts' ) ? array( 'inherit', 'private' ) : array( 'inherit' ),
 			'post_mime_type' => array( 'audio', 'video' ),
 			'posts_per_page' => (int) $request['per_page'],
 			'paged'          => (int) $request['page'],
@@ -189,6 +190,9 @@ final class Routes {
 			'order'          => 'DESC',
 			'fields'         => 'ids',
 		);
+		if ( ! current_user_can( 'edit_others_posts' ) ) {
+			$args['author'] = get_current_user_id();
+		}
 		$search = trim( (string) $request['search'] );
 		if ( '' !== $search ) {
 			$args['s'] = $search;
@@ -223,7 +227,7 @@ final class Routes {
 			$args['meta_query'] = array( $state[ $request['status'] ] ); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- An admin list, paged.
 		}
 		$query    = new \WP_Query( $args );
-		$ids      = array_filter( array_map( 'intval', $query->posts ), array( Media::class, 'is_transcribable' ) );
+		$ids      = array_filter( array_map( 'intval', $query->posts ), fn( int $id ) => Media::is_transcribable( $id ) && current_user_can( 'edit_post', $id ) );
 		$response = new \WP_REST_Response( array_values( array_map( array( Media::class, 'row' ), $ids ) ) );
 		$response->header( 'X-WP-Total', (string) $query->found_posts );
 		$response->header( 'X-WP-TotalPages', (string) $query->max_num_pages );
@@ -249,6 +253,14 @@ final class Routes {
 			$settings['speakerLabels'] = (string) $request['speakers'];
 		}
 		return Jobs::start( (int) $request['id'], $settings );
+	}
+
+	/**
+	 * Whether the user may list media on the VocalStack page. The list holds
+	 * only the attachments they may edit.
+	 */
+	public static function can_list_media(): bool {
+		return current_user_can( Proxy::CAPABILITY ) && current_user_can( 'upload_files' );
 	}
 
 	/**

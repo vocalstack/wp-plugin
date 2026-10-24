@@ -6,7 +6,7 @@ Read more about the [VocalStack transcription and translation plugin for WordPre
 
 Built on the PHP SDK [`vocalstack/sdk`](https://github.com/vocalstack/php-sdk). The API key stays on the server: browsers never receive it.
 
-## In wp-admin: VocalStack (below Media)
+## In wp-admin: VocalStack (admin menu)
 
 | Tab | |
 |---|---|

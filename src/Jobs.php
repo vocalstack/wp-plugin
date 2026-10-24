@@ -52,15 +52,20 @@ final class Jobs {
 			return Media::data( $id );
 		}
 		// Two clicks in quick succession start one job.
-		$lock = 'vocalstack_lock_' . $id;
-		if ( get_transient( $lock ) ) {
+		$lock = 'start_' . $id;
+		if ( ! Lock::acquire( $lock, 60 ) ) {
 			return Media::data( $id );
 		}
-		set_transient( $lock, 1, 30 );
+		// Another request may have started it between the check above and the lock.
+		wp_cache_delete( $id, 'post_meta' );
+		if ( in_array( get_post_meta( $id, Media::STATE, true ), Media::PENDING, true ) ) {
+			Lock::release( $lock );
+			return Media::data( $id );
+		}
 
 		$source = Media::source( $id );
 		if ( ! $source ) {
-			delete_transient( $lock );
+			Lock::release( $lock );
 			return new \WP_Error( 'vocalstack_no_file', __( 'The file for this attachment is missing.', 'vocalstack' ), array( 'status' => 404 ) );
 		}
 
@@ -70,7 +75,7 @@ final class Jobs {
 		try {
 			$started = Plugin::transcriber()->start( $source, '' !== $name ? $name : wp_basename( (string) get_attached_file( $id ) ), $key, $settings );
 		} catch ( TranscriberError $e ) {
-			delete_transient( $lock );
+			Lock::release( $lock );
 			self::fail( $id, $e->getMessage(), $e->error_code );
 			return new \WP_Error( 'vocalstack_' . $e->error_code, $e->getMessage(), array( 'status' => $e->http_status >= 400 && $e->http_status < 500 ? 400 : 502 ) );
 		}
@@ -90,7 +95,7 @@ final class Jobs {
 		);
 		update_post_meta( $id, Media::STATE, 'queued' );
 		update_post_meta( $id, Media::TRANSCRIPTION_ID, (string) $started['transcriptionId'] );
-		delete_transient( $lock );
+		Lock::release( $lock );
 		self::schedule_poll();
 		return Media::data( $id );
 	}

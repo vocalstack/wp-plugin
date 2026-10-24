@@ -35,6 +35,19 @@ What is sent, and when:
 
 Transcription is billed to your VocalStack account; the Widgets section of the VocalStack settings limits how much visitors can use. VocalStack Terms of Service: https://vocalstack.com/terms. Privacy Policy: https://vocalstack.com/privacy.
 
+== Source code and build ==
+
+The full source code is public at https://github.com/vocalstack/wp-plugin.
+
+The JavaScript and CSS in `build/` are compiled with @wordpress/scripts (webpack) from readable source that ships in this plugin:
+
+* `assets/src/` – the admin screens (`build/admin/`) and the front-end widgets (`build/widgets/`).
+* `blocks/` – the blocks (`build/blocks/`).
+
+To rebuild them: `npm install`, then `npm run build` (see `package.json`). The bundles include icons from @wordpress/icons (https://github.com/WordPress/gutenberg/tree/trunk/packages/icons); every other `@wordpress/*` package is loaded from WordPress itself.
+
+The PHP SDK in `vendor-prefixed/` is vocalstack/sdk (https://github.com/vocalstack/php-sdk), moved under the plugin's own namespace with Strauss (`scripts/build-release.sh` in the repository).
+
 == Installation ==
 
 1. Install and activate the plugin.

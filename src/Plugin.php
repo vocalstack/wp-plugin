@@ -27,6 +27,7 @@ final class Plugin {
 	public static function boot(): void {
 		Media::register();
 		Jobs::register();
+		Lock::register();
 		Rest\Routes::register();
 		Rest\Proxy::register();
 		Rest\AdminRoutes::register();
