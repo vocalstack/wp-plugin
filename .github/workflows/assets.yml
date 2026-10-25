@@ -1,0 +1,42 @@
+# Update the WordPress.org directory images (.wordpress-org/) without a release.
+#
+# Runs when .wordpress-org/ changes on main. The action also copies readme.txt
+# to trunk and to the stable tag, so it only runs while the readme's Stable tag
+# is a version already released (a v* tag exists); otherwise the images wait
+# for that release, which uploads them too.
+name: Directory assets
+
+on:
+  push:
+    branches: [ main ]
+    paths: [ '.wordpress-org/**' ]
+  workflow_dispatch:
+
+concurrency:
+  group: wordpress-org-svn
+  cancel-in-progress: false
+
+jobs:
+  assets:
+    runs-on: ubuntu-latest
+    environment: wordpress.org
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+      - name: The readme's Stable tag is already released
+        id: released
+        run: |
+          stable=$(sed -n 's/^Stable tag: *//p' readme.txt | tr -d '[:space:]')
+          if git rev-parse -q --verify "refs/tags/v$stable" > /dev/null; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Stable tag $stable is not released yet; the images go up with the v$stable release"
+          fi
+      - if: steps.released.outputs.ok == 'true'
+        uses: 10up/action-wordpress-plugin-asset-update@2.2.0
+        env:
+          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+          SLUG: vocalstack
+          IGNORE_OTHER_FILES: true
