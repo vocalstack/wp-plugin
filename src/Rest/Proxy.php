@@ -99,6 +99,7 @@ final class Proxy {
 		'PUT'    => array(
 			'transcriptions/{id}/broadcasts/{id}',
 			'recordings/{id}/speakers/{id}',
+			'transcriptions/{id}/appearances/{id}',
 		),
 		'DELETE' => array(
 			'transcriptions/{id}/broadcasts/{id}',

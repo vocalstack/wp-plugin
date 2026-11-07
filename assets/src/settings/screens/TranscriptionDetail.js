@@ -434,7 +434,7 @@ export default function TranscriptionDetail( { id } ) {
 										{ t.live && <RecordingsPicker transcriptionId={ t.id } value={ recordingId } onChange={ setRecordingId } /> }
 										<SelectControl label={ __( 'Language', 'vocalstack' ) } value={ lang } options={ translatable } onChange={ setLang } __nextHasNoMarginBottom />
 									</div>
-									<RecordingView recordingId={ recordingId } lang={ lang || undefined } playable={ ! failed && ( t.job?.hasAudio ?? true ) } />
+									<RecordingView recordingId={ recordingId } transcriptionId={ t.id } lang={ lang || undefined } playable={ ! failed && ( t.job?.hasAudio ?? true ) } />
 								</>
 							) : (
 								<p className="vsa-muted">{ __( 'Nothing recorded yet.', 'vocalstack' ) }</p>

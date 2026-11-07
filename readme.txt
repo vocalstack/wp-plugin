@@ -4,7 +4,7 @@ Tags: transcription, captions, podcast, speech to text, subtitles
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.1.0
+Stable tag: 0.2.0
 License: MIT
 License URI: https://opensource.org/licenses/MIT
 
@@ -65,6 +65,9 @@ Yes, on the file's edit screen. An edited transcript shows as plain text on your
 In your site's database, never sent to browsers. You can define `VOCALSTACK_API_KEY` in wp-config.php instead.
 
 == Changelog ==
+
+= 0.2.0 =
+* Renaming a speaker in a transcript works with VocalStack's new speakers API (transcription appearances), and still with the one before it.
 
 = 0.1.0 =
 * First version.

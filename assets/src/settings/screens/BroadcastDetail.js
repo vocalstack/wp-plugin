@@ -85,7 +85,7 @@ function Recordings( { broadcast } ) {
 							</div>
 							{ expanded && (
 								<div className="vsa-row__detail">
-									<RecordingView recordingId={ r.id } playable={ [ 'ended', 'finalized' ].includes( r.state ) } />
+									<RecordingView recordingId={ r.id } transcriptionId={ r.transcriptionId } playable={ [ 'ended', 'finalized' ].includes( r.state ) } />
 								</div>
 							) }
 						</li>

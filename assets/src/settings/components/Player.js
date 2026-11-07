@@ -6,7 +6,7 @@ import { Button, Icon, Spinner, TextControl } from '@wordpress/components';
 import { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
 import { check, close, pencil } from '@wordpress/icons';
-import { seg, vs } from '../lib/api';
+import { nameSpeaker, seg, vs } from '../lib/api';
 import { apiUrl } from '../lib/config';
 import { clock } from '../lib/format';
 
@@ -150,7 +150,7 @@ export function Transcript( { sentences, labelled, names = {}, time = 0, onSeek,
 /**
  * A recording's player and transcript, loading both. `lang` reads a translation.
  */
-export function RecordingView( { recordingId, lang, canName = true, playable = true } ) {
+export function RecordingView( { recordingId, transcriptionId, lang, canName = true, playable = true } ) {
 	const audioRef = useRef();
 	const [ time, setTime ] = useState( 0 );
 	const [ data, setData ] = useState( null );
@@ -174,7 +174,7 @@ export function RecordingView( { recordingId, lang, canName = true, playable = t
 	const names = useMemo( () => Object.fromEntries( ( data?.speakers ?? [] ).map( ( s, i ) => [ s.index ?? s.speaker ?? i, s.name ] ) ), [ data ] );
 
 	const rename = async ( index, name ) => {
-		await vs( `recordings/${ seg( recordingId ) }/speakers/${ index }`, { method: 'PUT', data: { name } } );
+		await nameSpeaker( { transcriptionId, recordingId, index }, name );
 		await load();
 	};
 

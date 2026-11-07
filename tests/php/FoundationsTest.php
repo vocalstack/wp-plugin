@@ -60,6 +60,8 @@ final class FoundationsTest extends \WP_UnitTestCase {
 		$this->assertFalse( Proxy::allowed( 'POST', 'billing/checkouts' ) );
 		$this->assertFalse( Proxy::allowed( 'DELETE', 'transcriptions/abc' ) );
 		$this->assertFalse( Proxy::allowed( 'GET', 'recordings/a/b/transcript' ) );
+		$this->assertTrue( Proxy::allowed( 'PUT', 'transcriptions/abc/appearances/2' ) );
+		$this->assertTrue( Proxy::allowed( 'PUT', 'recordings/abc/speakers/2' ) );
 	}
 
 	public function test_admins_reach_vocalstack_with_the_key(): void {
