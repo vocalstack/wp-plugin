@@ -22,6 +22,8 @@ defined( 'ABSPATH' ) || exit;
  * 1. `POST /wp-json/vocalstack/v1/connect` (administrators): a random state
  *    and a PKCE verifier are kept for ten minutes for that administrator, and
  *    the answer is the address of VocalStack's consent screen.
+ *    When the site is already connected, the address names that workspace
+ *    (`workspace=<id>`) so the consent screen starts on it.
  * 2. The person signs in there, picks a workspace and clicks Authenticate;
  *    VocalStack sends the browser to `admin-post.php?action=vocalstack_connect`
  *    with `code` and `state` (or `error=access_denied` on Cancel).
@@ -117,7 +119,21 @@ final class Connect {
 			// The Transcriptions and Broadcasts tabs show everything in the workspace.
 			'reach'                 => 'account',
 		);
+		// The consent screen starts on the workspace this site is connected to.
+		$workspace = self::connected_workspace();
+		if ( '' !== $workspace ) {
+			$query['workspace'] = $workspace;
+		}
 		return array( 'url' => Settings::dashboard_url() . '/connect?' . http_build_query( $query, '', '&', PHP_QUERY_RFC3986 ) );
+	}
+
+	/**
+	 * The id of the workspace of the key in use as it was last kept, when it
+	 * is a uuid, or ''. VocalStack is never asked for it here.
+	 */
+	private static function connected_workspace(): string {
+		$id = Workspace::id();
+		return preg_match( '/\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i', $id ) ? $id : '';
 	}
 
 	/**

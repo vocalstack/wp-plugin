@@ -100,6 +100,65 @@ final class ConnectTest extends TestCase {
 		$this->assertSame( array(), $this->http->sent );
 	}
 
+	public function test_start_names_the_connected_workspace(): void {
+		$id = '0b6f3c1e-8a52-4d7b-9e10-3f2a6c5d4b7a';
+		Workspace::remember(
+			array(
+				'workspace' => array(
+					'id'   => $id,
+					'name' => 'North Radio',
+				),
+			)
+		);
+
+		$response = $this->post( '/connect' );
+		$url      = $response->get_data()['url'];
+		parse_str( (string) wp_parse_url( $url, PHP_URL_QUERY ), $query );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( $id, $query['workspace'] );
+		$this->assertStringContainsString( '&workspace=' . $id, $url );
+		$this->assertSame( $this->pending()['state'], $query['state'] );
+		$this->assertSame( array(), $this->http->sent );
+	}
+
+	public function test_start_names_no_workspace_when_none_is_kept(): void {
+		$this->assertArrayNotHasKey( 'workspace', $this->start() );
+
+		Workspace::remember( array( 'user' => array( 'id' => 'u_1' ) ) );
+		$this->assertArrayNotHasKey( 'workspace', $this->start() );
+
+		$this->assertSame( array(), $this->http->sent );
+	}
+
+	public function test_start_names_no_workspace_kept_for_another_key(): void {
+		Workspace::remember( array( 'workspace' => array( 'id' => '0b6f3c1e-8a52-4d7b-9e10-3f2a6c5d4b7a' ) ) );
+		Settings::set_api_key( 'vs_key_another' );
+
+		$this->assertArrayNotHasKey( 'workspace', $this->start() );
+	}
+
+	public function test_start_names_no_workspace_whose_id_is_not_a_uuid(): void {
+		$malformed = array(
+			'ws_old',
+			'0b6f3c1e8a524d7b9e103f2a6c5d4b7a',
+			'0b6f3c1e-8a52-4d7b-9e10-3f2a6c5d4b7',
+			'0b6f3c1e-8a52-4d7b-9e10-3f2a6c5d4b7a-x',
+			'zb6f3c1e-8a52-4d7b-9e10-3f2a6c5d4b7a',
+		);
+		foreach ( $malformed as $id ) {
+			Workspace::remember( array( 'workspace' => array( 'id' => $id ) ) );
+			$this->assertSame( $id, Workspace::id() );
+			$this->assertArrayNotHasKey( 'workspace', $this->start(), $id );
+		}
+
+		$option       = get_option( Workspace::OPTION );
+		$option['id'] = "0b6f3c1e-8a52-4d7b-9e10-3f2a6c5d4b7a\n&reach=key";
+		update_option( Workspace::OPTION, $option, false );
+		$this->assertArrayNotHasKey( 'workspace', $this->start() );
+		$this->assertSame( array(), $this->http->sent );
+	}
+
 	public function test_a_plain_http_public_site_cannot_use_connect(): void {
 		$this->site( 'http://shop.example' );
 

@@ -4,7 +4,7 @@ Tags: transcription, captions, podcast, speech to text, subtitles
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.3.0
+Stable tag: 0.3.1
 License: MIT
 License URI: https://opensource.org/licenses/MIT
 
@@ -76,6 +76,9 @@ In Settings, press Change next to the workspace and pick another one in VocalSta
 One-click Connect needs a site served over https (or a local site on localhost). On a plain http site, paste an API key.
 
 == Changelog ==
+
+= 0.3.1 =
+* Change, next to the workspace, opens VocalStack's consent screen on the workspace the site is connected to.
 
 = 0.3.0 =
 * Settings shows the VocalStack workspace the site is connected to, with its icon, for a pasted key and a wp-config.php key too.
