@@ -11,6 +11,7 @@ use VocalStack\WP\Media;
 use VocalStack\WP\Rest\Proxy;
 use VocalStack\WP\Settings;
 use VocalStack\WP\Transcriber\TranscriberError;
+use VocalStack\WP\Workspace;
 
 final class RestTest extends TestCase {
 
@@ -82,6 +83,110 @@ final class RestTest extends TestCase {
 		$data = $this->call( 'POST', '/settings', array( 'apiKey' => 'vs_key_new' ) )->get_data();
 		$this->assertSame( 'vs_key_new', Settings::api_key() );
 		$this->assertSame( 'Acme', $data['connection']['account'] );
+	}
+
+	private function in_workspace( string $id, string $name, bool $personal = false, ?string $icon = null ): void {
+		$this->vs->account['workspace'] = array(
+			'id'       => $id,
+			'name'     => $name,
+			'personal' => $personal,
+			'iconUrl'  => $icon,
+		);
+	}
+
+	public function test_the_connection_names_the_workspace_of_a_pasted_key(): void {
+		$this->login( 'administrator' );
+		$this->in_workspace( '3f2b8c1e-7a4d-4e9b-9c55-0d1e2f3a4b5c', 'Acme studio', false, '/workspace-icons/3f2b8c1e?v=2&exp=9&sig=abc' );
+
+		$data = $this->call( 'POST', '/settings', array( 'apiKey' => 'vs_key_new' ) )->get_data();
+
+		$this->assertSame(
+			array(
+				'id'       => '3f2b8c1e-7a4d-4e9b-9c55-0d1e2f3a4b5c',
+				'name'     => 'Acme studio',
+				'personal' => false,
+				'iconUrl'  => 'https://api.vocalstack.com/workspace-icons/3f2b8c1e?v=2&exp=9&sig=abc',
+			),
+			$data['connection']['workspace']
+		);
+	}
+
+	public function test_the_workspace_is_read_when_the_settings_load_and_then_kept_for_an_hour(): void {
+		$this->login( 'administrator' );
+		$this->in_workspace( 'ws_personal', 'Personal workspace', true );
+
+		$first = $this->call( 'GET', '/settings' )->get_data();
+		$this->call( 'GET', '/settings' );
+
+		$this->assertSame( 'Personal workspace', $first['connection']['workspace']['name'] );
+		$this->assertTrue( $first['connection']['workspace']['personal'] );
+		$this->assertNull( $first['connection']['workspace']['iconUrl'] );
+		$this->assertSame( array( 'account' ), $this->vs->names() );
+	}
+
+	public function test_a_renamed_workspace_shows_after_test_connection(): void {
+		$this->login( 'administrator' );
+		$this->in_workspace( 'ws_1', 'Acme' );
+		$this->call( 'GET', '/settings' );
+		$this->in_workspace( 'ws_1', 'Acme Radio' );
+
+		$data = $this->call( 'POST', '/settings/test' )->get_data();
+
+		$this->assertSame( 'Acme Radio', $data['connection']['workspace']['name'] );
+	}
+
+	public function test_an_older_api_without_a_workspace_keeps_the_account_name(): void {
+		$this->login( 'administrator' );
+
+		$data = $this->call( 'GET', '/settings' )->get_data();
+
+		$this->assertNull( $data['connection']['workspace'] );
+		$this->assertSame( 'Acme', $data['connection']['account'] );
+	}
+
+	public function test_another_key_never_shows_the_workspace_of_the_one_before(): void {
+		$this->login( 'administrator' );
+		$this->in_workspace( 'ws_1', 'Acme' );
+		$this->call( 'GET', '/settings' );
+		Settings::set_api_key( 'vs_key_other' );
+		$this->vs->fail = new TranscriberError( 'Unavailable', 'unavailable', 503 );
+
+		$data = $this->call( 'GET', '/settings' )->get_data();
+
+		$this->assertNull( $data['connection']['workspace'] );
+		$this->assertSame( '', Workspace::id() );
+	}
+
+	public function test_an_icon_that_is_not_a_path_on_the_api_is_not_shown(): void {
+		$this->login( 'administrator' );
+		$this->in_workspace( 'ws_1', 'Acme', false, '//evil.example/icon.png' );
+
+		$data = $this->call( 'GET', '/settings' )->get_data();
+
+		$this->assertNull( $data['connection']['workspace']['iconUrl'] );
+	}
+
+	public function test_disconnecting_forgets_the_workspace(): void {
+		$this->login( 'administrator' );
+		$this->in_workspace( 'ws_1', 'Acme' );
+		$this->call( 'GET', '/settings' );
+
+		$data = $this->call( 'POST', '/settings', array( 'apiKey' => '' ) )->get_data();
+
+		$this->assertNull( $data['connection']['workspace'] );
+		$this->assertFalse( get_option( Workspace::OPTION ) );
+	}
+
+	public function test_a_refused_key_keeps_the_workspace_in_use(): void {
+		$this->login( 'administrator' );
+		$this->in_workspace( 'ws_1', 'Acme' );
+		$this->call( 'GET', '/settings' );
+		$this->vs->fail = new TranscriberError( 'Invalid key', 'unauthorized', 401 );
+
+		$this->assertSame( 400, $this->call( 'POST', '/settings', array( 'apiKey' => 'vs_key_wrong' ) )->get_status() );
+
+		$this->assertSame( 'vs_key_test', Settings::api_key() );
+		$this->assertSame( 'ws_1', Workspace::id() );
 	}
 
 	public function test_captions_for_a_transcribed_file(): void {

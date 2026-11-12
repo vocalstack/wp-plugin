@@ -4,7 +4,7 @@ Tags: transcription, captions, podcast, speech to text, subtitles
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.2.0
+Stable tag: 0.3.0
 License: MIT
 License URI: https://opensource.org/licenses/MIT
 
@@ -19,6 +19,8 @@ VocalStack adds a Transcribe button to every audio and video file in your Media 
 * Videos get captions automatically.
 * Transcribe new uploads automatically, or only when you click.
 
+Connect with one click: press Connect VocalStack, sign in, pick the VocalStack workspace this site should use, and the site gets its own API key. Settings shows the workspace the site is connected to, with its icon, and Change picks another one. Everything the site transcribes lands in that workspace and is billed there. You can paste an API key instead.
+
 Read more about this plugin on the VocalStack website: https://vocalstack.com/wordpress-transcription-and-translation-plugin/
 
 == External services ==
@@ -31,7 +33,8 @@ What is sent, and when:
 * Record widget: when a visitor allowed by your widget settings presses Record, your server creates a live transcription and the visitor's browser streams the audio from the chosen source (microphone or a browser tab) directly to VocalStack, which sends the transcript back to that browser. For a stream source you configure, VocalStack fetches the stream itself.
 * Player widget: playing a VocalStack recording loads its audio and transcript from VocalStack; following a public broadcast opens a connection from the visitor's browser to VocalStack to receive the live transcript and, if the visitor presses Listen, the live audio.
 * Admin screens (Transcriptions, Broadcasts): your administrators' actions are sent to VocalStack through your server: listing, creating, renaming, sharing, exporting, archiving and deleting transcriptions and broadcasts.
-* Connecting or testing your key, and the Remaining card: your account's name, plan and balance are read.
+* Connecting or testing your key, opening the VocalStack page, and the Remaining card: the key's name, its workspace (name and icon), plan and balance are read. The workspace's icon is an image your administrators' browsers load from VocalStack.
+* One-click Connect: when an administrator presses Connect VocalStack or Change, their browser opens VocalStack's dashboard (https://app.vocalstack.com) with your site's name and the address to come back to. After they approve, your server exchanges the code VocalStack sent back for an API key.
 
 Transcription is billed to your VocalStack account; the Widgets section of the VocalStack settings limits how much visitors can use. VocalStack Terms of Service: https://vocalstack.com/terms. Privacy Policy: https://vocalstack.com/privacy.
 
@@ -51,7 +54,7 @@ The PHP SDK in `vendor-prefixed/` is vocalstack/sdk (https://github.com/vocalsta
 == Installation ==
 
 1. Install and activate the plugin.
-2. Open VocalStack in the admin menu and paste an API key from https://app.vocalstack.com/developers/keys.
+2. Open VocalStack in the admin menu, go to Settings and press Connect VocalStack: sign in, pick a workspace and click Authenticate. On a site without https, paste an API key from https://app.vocalstack.com/developers/keys instead.
 3. Open an audio or video file in the Media Library and click Transcribe.
 
 == Frequently Asked Questions ==
@@ -64,7 +67,21 @@ Yes, on the file's edit screen. An edited transcript shows as plain text on your
 
 In your site's database, never sent to browsers. You can define `VOCALSTACK_API_KEY` in wp-config.php instead.
 
+= How do I use another VocalStack workspace? =
+
+In Settings, press Change next to the workspace and pick another one in VocalStack. The site gets a new key for that workspace; the old key keeps working until you revoke it in VocalStack under Developers → API keys. A key belongs to one workspace, so a pasted key or one set in wp-config.php is changed by replacing it with a key made in the other workspace. Transcripts already saved with your files stay; a transcription still running in the old workspace has to be started again.
+
+= Why is there no Connect VocalStack button? =
+
+One-click Connect needs a site served over https (or a local site on localhost). On a plain http site, paste an API key.
+
 == Changelog ==
+
+= 0.3.0 =
+* Settings shows the VocalStack workspace the site is connected to, with its icon, for a pasted key and a wp-config.php key too.
+* One-click Connect: press Connect VocalStack, sign in and pick a workspace, and the site gets its own key. Pasting a key still works.
+* Change, next to the workspace, connects again to pick another workspace. The key in use is replaced only once the new one is issued.
+* A transcription that belongs to another workspace than the connected one says so in plain words and can be started again.
 
 = 0.2.0 =
 * Renaming a speaker in a transcript works with VocalStack's new speakers API (transcription appearances), and still with the one before it.

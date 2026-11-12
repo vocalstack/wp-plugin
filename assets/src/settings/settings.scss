@@ -61,6 +61,81 @@
 	}
 }
 
+// The workspace the site is connected to: its mark, the label and its name.
+.vocalstack-workspace {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 12px;
+
+	&__text {
+		flex: 1 1 160px;
+		min-width: 0;
+	}
+
+	&__label {
+		font-size: 11px;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: #646970;
+	}
+
+	&__name {
+		font-size: 15px;
+		font-weight: 600;
+		line-height: 1.4;
+		color: #1d2327;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+}
+
+// The dashboard's workspace mark (.wsmark): initials on the workspace's colour,
+// a person for the personal workspace, or the workspace's own icon.
+.vsa-wsmark {
+	--vsa-ws-c: oklch(0.66 0.13 var(--vsa-ws-h, 252));
+
+	flex: none;
+	display: grid;
+	place-items: center;
+	box-sizing: border-box;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	line-height: 1;
+	// Browsers without oklch() or color-mix() keep these.
+	background: #e7eaf6;
+	color: #3d4a8f;
+	background: color-mix(in oklab, var(--vsa-ws-c) 22%, transparent);
+	color: color-mix(in oklab, var(--vsa-ws-c) 72%, #1d2327);
+	box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--vsa-ws-c) 30%, transparent);
+
+	&.is-me {
+		background: #f0f0f1;
+		color: #50575e;
+		box-shadow: inset 0 0 0 1px #dcdcde;
+	}
+
+	&.is-img {
+		overflow: hidden;
+		background: #f6f7f7;
+		box-shadow: inset 0 0 0 1px #dcdcde;
+
+		img {
+			display: block;
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+		}
+	}
+
+	&.is-none {
+		background: #f6f7f7;
+		box-shadow: none;
+	}
+}
+
 .vocalstack-balance {
 	.components-card__header {
 		justify-content: space-between;

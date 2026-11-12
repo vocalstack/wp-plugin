@@ -19,7 +19,9 @@ import { useEffect, useState } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
 import BalanceCard from '../BalanceCard';
 import { languageOptions, useLanguages } from '../lib/account';
+import { takeConnectNotice } from '../lib/config';
 import { navigate } from '../lib/router';
+import WorkspaceMark from '../components/WorkspaceMark';
 import WidgetPolicy from './WidgetPolicy';
 import ListeningLanguages from '../components/ListeningLanguages';
 
@@ -50,7 +52,8 @@ export default function SettingsScreen( { section = 'account', onConnection } ) 
 	const [ state, setState ] = useState( null );
 	const [ key, setKey ] = useState( '' );
 	const [ busy, setBusy ] = useState( '' );
-	const [ notice, setNotice ] = useState( null );
+	// Back from VocalStack's consent screen: what one-click Connect did.
+	const [ notice, setNotice ] = useState( takeConnectNotice );
 
 	useEffect( () => {
 		apiFetch( { path: '/vocalstack/v1/settings' } ).then( setState, ( e ) => setNotice( { status: 'error', text: e.message } ) );
@@ -87,6 +90,22 @@ export default function SettingsScreen( { section = 'account', onConnection } ) 
 		}
 	};
 
+	// One-click Connect: VocalStack's consent screen opens in this tab and comes
+	// back here. The key in use stays until the new one has been issued.
+	const connectWithVocalStack = async ( what ) => {
+		setBusy( what );
+		setNotice( null );
+		try {
+			const { url } = await apiFetch( { path: '/vocalstack/v1/connect', method: 'POST' } );
+			window.location.assign( url );
+		} catch ( e ) {
+			setNotice( { status: 'error', text: e.message } );
+			setBusy( '' );
+		}
+	};
+	const workspace = connection.workspace;
+	const needsHttps = __( 'One-click Connect needs a site served over https, so this site connects with a pasted API key.', 'vocalstack' );
+
 	const save = (
 		<Button variant="primary" isBusy={ busy === 'save' } disabled={ !! busy } onClick={ () => send( 'save', { path: '/vocalstack/v1/settings', method: 'POST', data: { settings } }, __( 'Settings saved.', 'vocalstack' ) ) }>
 			{ __( 'Save settings', 'vocalstack' ) }
@@ -103,12 +122,51 @@ export default function SettingsScreen( { section = 'account', onConnection } ) 
 				<CardBody>
 					{ connected ? (
 						<>
-							<p>
-								{ connection.account
-									? sprintf( /* translators: 1: account name, 2: last characters of the key */ __( 'Connected to %1$s with the key ending %2$s.', 'vocalstack' ), connection.account, connection.keyHint )
-									: sprintf( /* translators: %s: last characters of the key */ __( 'Connected with the key ending %s.', 'vocalstack' ), connection.keyHint ) }
-							</p>
+							{ workspace ? (
+								<>
+									<div className="vocalstack-workspace">
+										<WorkspaceMark workspace={ workspace } size={ 36 } />
+										<div className="vocalstack-workspace__text">
+											<div className="vocalstack-workspace__label">{ __( 'Workspace', 'vocalstack' ) }</div>
+											<div className="vocalstack-workspace__name">{ workspace.name }</div>
+										</div>
+										{ connection.editable && connection.connect && (
+											<Button variant="secondary" isBusy={ busy === 'change' } disabled={ !! busy } onClick={ () => connectWithVocalStack( 'change' ) } aria-label={ __( 'Change workspace', 'vocalstack' ) }>
+												{ __( 'Change', 'vocalstack' ) }
+											</Button>
+										) }
+									</div>
+									<p>
+										{ sprintf( /* translators: %s: last characters of the key */ __( 'Connected with the key ending %s. Everything this site transcribes lands in this workspace and is billed there.', 'vocalstack' ), connection.keyHint ) }
+									</p>
+								</>
+							) : (
+								<p>
+									{ connection.account
+										? sprintf( /* translators: 1: account name, 2: last characters of the key */ __( 'Connected to %1$s with the key ending %2$s.', 'vocalstack' ), connection.account, connection.keyHint )
+										: sprintf( /* translators: %s: last characters of the key */ __( 'Connected with the key ending %s.', 'vocalstack' ), connection.keyHint ) }
+								</p>
+							) }
 							{ ! connection.editable && <p className="description">{ __( 'The key is set by VOCALSTACK_API_KEY in wp-config.php.', 'vocalstack' ) }</p> }
+							{ connection.editable && connection.connect && workspace && (
+								<p className="description">
+									{ __( 'Change opens VocalStack, where you pick another workspace. Connecting again makes a new key; the old one keeps working until it is revoked in VocalStack under Developers → API keys.', 'vocalstack' ) }
+								</p>
+							) }
+							{ connection.editable && connection.connect && ! workspace && (
+								<p className="description">
+									<Button variant="link" disabled={ !! busy } onClick={ () => connectWithVocalStack( 'change' ) }>
+										{ __( 'Connect again with VocalStack', 'vocalstack' ) }
+									</Button>{ ' ' }
+									{ __( 'Connecting again makes a new key; the old one keeps working until it is revoked in VocalStack under Developers → API keys.', 'vocalstack' ) }
+								</p>
+							) }
+							{ connection.editable && ! connection.connect && (
+								<p className="description">
+									{ needsHttps }{ ' ' }
+									{ __( 'To use another workspace, disconnect and paste a key made in that workspace.', 'vocalstack' ) }
+								</p>
+							) }
 							<div className="vocalstack-settings__row">
 								<Button variant="secondary" isBusy={ busy === 'test' } disabled={ !! busy } onClick={ () => send( 'test', { path: '/vocalstack/v1/settings/test', method: 'POST' }, __( 'The connection works.', 'vocalstack' ) ) }>
 									{ __( 'Test connection', 'vocalstack' ) }
@@ -123,10 +181,26 @@ export default function SettingsScreen( { section = 'account', onConnection } ) 
 						</>
 					) : (
 						<>
-							<p>
-								{ __( 'Transcription runs on VocalStack and is billed to your VocalStack account.', 'vocalstack' ) }{ ' ' }
-								<ExternalLink href={ `${ dashboardUrl }/developers/keys` }>{ __( 'Sign up or create an API key', 'vocalstack' ) }</ExternalLink>
-							</p>
+							<p>{ __( 'Transcription runs on VocalStack. Everything this site transcribes lands in one VocalStack workspace and is billed there.', 'vocalstack' ) }</p>
+							{ connection.connect ? (
+								<>
+									<div className="vocalstack-settings__row">
+										<Button variant="primary" isBusy={ busy === 'oneclick' } disabled={ !! busy } onClick={ () => connectWithVocalStack( 'oneclick' ) }>
+											{ __( 'Connect VocalStack', 'vocalstack' ) }
+										</Button>
+										<span className="description">{ __( 'Sign in to VocalStack, pick a workspace, and this site gets its own key.', 'vocalstack' ) }</span>
+									</div>
+									<p>
+										{ __( 'Or paste an API key from the workspace this site should use.', 'vocalstack' ) }{ ' ' }
+										<ExternalLink href={ `${ dashboardUrl }/developers/keys` }>{ __( 'Sign up or create an API key', 'vocalstack' ) }</ExternalLink>
+									</p>
+								</>
+							) : (
+								<p>
+									{ needsHttps }{ ' ' }
+									<ExternalLink href={ `${ dashboardUrl }/developers/keys` }>{ __( 'Sign up or create an API key', 'vocalstack' ) }</ExternalLink>
+								</p>
+							) }
 							<div className="vocalstack-settings__row has-field">
 								<TextControl
 									label={ __( 'API key', 'vocalstack' ) }
@@ -137,7 +211,7 @@ export default function SettingsScreen( { section = 'account', onConnection } ) 
 									onChange={ setKey }
 									__nextHasNoMarginBottom
 								/>
-								<Button variant="primary" isBusy={ busy === 'connect' } disabled={ ! key || !! busy } onClick={ connect }>
+								<Button variant={ connection.connect ? 'secondary' : 'primary' } isBusy={ busy === 'connect' } disabled={ ! key || !! busy } onClick={ connect }>
 									{ __( 'Connect', 'vocalstack' ) }
 								</Button>
 							</div>

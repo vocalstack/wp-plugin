@@ -87,6 +87,8 @@ final class Jobs {
 				'recordingId'     => (string) $started['recordingId'],
 				'transcriptionId' => (string) $started['transcriptionId'],
 				'idempotencyKey'  => $key,
+				// The workspace of the key that started it: another workspace's key can't read it.
+				'workspaceId'     => Workspace::id(),
 				// What was asked for: the API answers with the detected language either way.
 				'spokenLanguage'  => $settings['spokenLanguage'] ?? '',
 				'startedAt'       => time(),
@@ -140,12 +142,30 @@ final class Jobs {
 				update_post_meta( $id, Media::STATE, $state );
 			}
 		} catch ( TranscriberError $e ) {
-			// A 404 means the recording is gone; anything else may pass, so try again next time.
+			// A 404 means this key can't read the recording; anything else may pass, so try again next time.
 			if ( 404 === $e->http_status ) {
-				self::fail( $id, $e->getMessage(), $e->error_code );
+				self::fail( $id, self::missing_message( $job ), $e->error_code );
 			}
 		}
 		return Media::data( $id );
+	}
+
+	/**
+	 * Why VocalStack answers 404 for a job this site started: the site is now
+	 * connected to another workspace, or the transcription was deleted there.
+	 *
+	 * @param array<string, mixed> $job The job as saved on the attachment.
+	 */
+	public static function missing_message( array $job ): string {
+		$started_in = (string) ( $job['workspaceId'] ?? '' );
+		$now_in     = Workspace::id();
+		if ( '' !== $started_in && '' !== $now_in && $started_in !== $now_in ) {
+			return __( 'This transcription belongs to another workspace than the one this site is connected to now. Transcribe the file again to make it in this workspace.', 'vocalstack' );
+		}
+		if ( '' !== $started_in && $started_in === $now_in ) {
+			return __( 'This transcription is no longer in VocalStack. Transcribe the file again.', 'vocalstack' );
+		}
+		return __( 'This transcription is not in the workspace this site is connected to: it belongs to another workspace, or it was deleted in VocalStack. Transcribe the file again.', 'vocalstack' );
 	}
 
 	/**

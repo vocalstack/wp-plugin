@@ -14,11 +14,22 @@ Built on the PHP SDK [`vocalstack/sdk`](https://github.com/vocalstack/php-sdk). 
 | **Broadcasts** | Like app.vocalstack.com/broadcasts: list, create, settings (code, access, language), audio sources (add, check, record from), recordings, share links, archive. |
 | **Media Library** | Every audio and video file with its transcript state, language, speakers and a play button. |
 | **Widgets** | A shortcode generator with preview, and how to restyle widgets. |
-| **Settings** | Account (connection, minutes remaining), Transcription defaults, Display (captions), Widgets (who may record or upload, and how much). |
+| **Settings** | Account (the connected workspace, one-click Connect, minutes remaining), Transcription defaults, Display (captions), Widgets (who may record or upload, and how much). |
 
 Each audio/video attachment also gets a transcript panel on its edit screen, and Audio/Video blocks get one in the block editor.
 
 **Who sees it:** the `vocalstack_manage` capability, which administrators have. Grant it to other roles with a role editor; changing the API key still needs `manage_options`.
+
+## Connecting, and the workspace
+
+A VocalStack API key belongs to one **workspace**: everything the site makes with it lands there and is billed there. **Settings → Account** shows that workspace with its mark, drawn as the VocalStack dashboard draws it (its own icon; a person for the personal workspace; else its initials on its colour). It is read from `GET /v1/me` whenever the connection is checked, and again after an hour.
+
+- **Connect VocalStack** (one click). OAuth 2.0 authorization code with PKCE, where the token is an API key (`src/Connect.php`): `POST /wp-json/vocalstack/v1/connect` keeps a state and a verifier for that administrator for ten minutes and answers the consent screen's address; the person signs in, picks a workspace and clicks Authenticate; VocalStack redirects to `wp-admin/admin-post.php?action=vocalstack_connect`, which checks the state, redeems the code at `POST /v1/connect/token` from the server and stores the key where a pasted key is stored. The key asks for `read write` on the whole workspace (`reach=account`) and never passes through a browser. Administrators (`manage_options`) only.
+- **Change**, next to the workspace, runs Connect again to pick another workspace. The key in use is replaced only once the new one is issued; Cancel or a failure leaves it untouched. The old key keeps working until it is revoked in VocalStack under Developers → API keys.
+- **Paste a key** still works, and is the only way on a site without https: VocalStack sends the code only to an https address, or to http on `localhost` / `127.0.0.1`.
+- **`VOCALSTACK_API_KEY`** in wp-config.php wins over both; Settings shows its workspace and offers no Change.
+
+After a change, transcripts saved with Media Library files stay. A job that was still running in the old workspace fails with a sentence saying it belongs to another workspace, and the file can be transcribed again.
 
 ## Widgets
 
@@ -90,6 +101,7 @@ VocalStack can't reach `localhost`, so locally a Media Library file is uploaded 
 ```sh
 npm run test:php       # PHPUnit in wp-env's tests container
 composer lint          # PHPCS: WordPress Coding Standards + PHP 8.1 compatibility
+npm run test:js        # Jest: the workspace mark's initials and colour, as the dashboard computes them
 ```
 
 The tests never reach VocalStack: the bootstrap fails any request to it. They run the real SDK over `tests/php/FakeHttp.php`, or `FakeTranscriber.php` for the Media Library jobs. Check against the real API by hand with short clips; live and file transcriptions are billed per minute, with a minimum per transcription.

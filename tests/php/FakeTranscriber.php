@@ -46,10 +46,13 @@ final class FakeTranscriber implements Transcriber {
 		}
 	}
 
+	/** @var array<string, mixed> What account() answers; tests add `workspace`. */
+	public array $account = array( 'organization' => array( 'name' => 'Acme' ) );
+
 	public function account(): array {
 		$this->calls[] = array( 'account', null );
 		$this->maybe_fail();
-		return array( 'organization' => array( 'name' => 'Acme' ) );
+		return $this->account;
 	}
 
 	/** @var array<string, mixed> What billing() answers. */

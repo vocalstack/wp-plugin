@@ -8,6 +8,7 @@
 namespace VocalStack\WP\Admin;
 
 use VocalStack\WP\Assets;
+use VocalStack\WP\Connect;
 use VocalStack\WP\Rest\Proxy;
 use VocalStack\WP\Settings;
 use VocalStack\WP\Widgets\Widgets;
@@ -53,6 +54,8 @@ final class SettingsPage {
 				'schema'        => Widgets::schema(),
 				'maxUploadSize' => (int) wp_max_upload_size(),
 				'previewUrl'    => WidgetPreview::url(),
+				// The outcome of a one-click Connect this administrator just came back from.
+				'connectNotice' => Connect::take_notice(),
 			)
 		);
 	}

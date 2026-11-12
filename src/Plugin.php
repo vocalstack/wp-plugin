@@ -31,6 +31,7 @@ final class Plugin {
 		Rest\Routes::register();
 		Rest\Proxy::register();
 		Rest\AdminRoutes::register();
+		Connect::register();
 		Widgets\RecordRoutes::register();
 		Widgets\UploadRoutes::register();
 		Widgets\PlayerRoutes::register();

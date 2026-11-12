@@ -8,11 +8,13 @@
 namespace VocalStack\WP\Rest;
 
 use VocalStack\WP\Balance;
+use VocalStack\WP\Connect;
 use VocalStack\WP\Jobs;
 use VocalStack\WP\Media;
 use VocalStack\WP\Plugin;
 use VocalStack\WP\Settings;
 use VocalStack\WP\Transcriber\TranscriberError;
+use VocalStack\WP\Workspace;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -317,22 +319,52 @@ final class Routes {
 	}
 
 	/**
-	 * The settings and the connection, without the key itself.
+	 * The settings and the connection, without the key itself. `workspace` is
+	 * the VocalStack workspace the key belongs to (null when the API does not
+	 * name it); `connect` says whether one-click Connect can run here.
 	 *
 	 * @return array<string, mixed>
 	 */
 	public static function get_settings(): array {
-		$key = Settings::api_key();
+		$key    = Settings::api_key();
+		$source = Settings::key_source();
+		if ( '' !== $key && Workspace::is_stale() ) {
+			self::read_account();
+		}
 		return array(
 			'settings'     => Settings::all(),
 			'connection'   => array(
-				'source'   => Settings::key_source(),
-				'keyHint'  => '' === $key ? '' : '…' . substr( $key, -4 ),
-				'account'  => get_option( 'vocalstack_account', '' ),
-				'editable' => 'constant' !== Settings::key_source(),
+				'source'    => $source,
+				'keyHint'   => '' === $key ? '' : '…' . substr( $key, -4 ),
+				'account'   => get_option( 'vocalstack_account', '' ),
+				'workspace' => '' === $key ? null : Workspace::current(),
+				'editable'  => 'constant' !== $source,
+				'connect'   => Connect::available(),
 			),
 			'dashboardUrl' => Settings::dashboard_url(),
 		);
+	}
+
+	/**
+	 * Ask `GET /v1/me` who the key is and remember the account's name and the
+	 * workspace.
+	 *
+	 * @return TranscriberError|null Why VocalStack did not answer.
+	 */
+	private static function read_account(): ?TranscriberError {
+		try {
+			$me = Plugin::transcriber()->account();
+		} catch ( TranscriberError $e ) {
+			Workspace::postpone();
+			return $e;
+		}
+		$label = self::account_label( $me );
+		// A key made by Connect has the name the token answer gave; keep it when /v1/me names none.
+		if ( '' !== $label || '' === (string) get_option( 'vocalstack_account', '' ) ) {
+			update_option( 'vocalstack_account', $label, false );
+		}
+		Workspace::remember( $me );
+		return null;
 	}
 
 	/**
@@ -352,12 +384,19 @@ final class Routes {
 				return new \WP_Error( 'vocalstack_bad_key', __( 'A VocalStack API key starts with vs_key_.', 'vocalstack' ), array( 'status' => 400 ) );
 			}
 			$previous = (string) get_option( Settings::KEY_OPTION, '' );
+			$account  = get_option( 'vocalstack_account', '' );
+			$saved    = get_option( Workspace::OPTION );
 			Settings::set_api_key( $key );
 			delete_option( 'vocalstack_account' );
+			Workspace::forget();
 			if ( '' !== $key ) {
 				$checked = self::test_connection();
 				if ( is_wp_error( $checked ) ) {
 					Settings::set_api_key( $previous );
+					update_option( 'vocalstack_account', $account, false );
+					if ( is_array( $saved ) ) {
+						update_option( Workspace::OPTION, $saved, false );
+					}
 					return $checked;
 				}
 			}
@@ -366,7 +405,8 @@ final class Routes {
 	}
 
 	/**
-	 * Check the key against `GET /v1/me` and remember the account's name.
+	 * Check the key against `GET /v1/me` and remember the account's name and
+	 * the workspace.
 	 *
 	 * @return array<string, mixed>|\WP_Error
 	 */
@@ -374,13 +414,11 @@ final class Routes {
 		if ( '' === Settings::api_key() ) {
 			return new \WP_Error( 'vocalstack_not_connected', __( 'No API key is set.', 'vocalstack' ), array( 'status' => 409 ) );
 		}
-		try {
-			$me = Plugin::transcriber()->account();
-		} catch ( TranscriberError $e ) {
+		$e = self::read_account();
+		if ( $e ) {
 			$status = 401 === $e->http_status ? 400 : 502;
 			return new \WP_Error( 'vocalstack_' . $e->error_code, $e->getMessage(), array( 'status' => $status ) );
 		}
-		update_option( 'vocalstack_account', self::account_label( $me ), false );
 		return self::get_settings();
 	}
 

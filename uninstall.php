@@ -12,6 +12,7 @@ defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 delete_option( 'vocalstack_settings' );
 delete_option( 'vocalstack_api_key' );
 delete_option( 'vocalstack_account' );
+delete_option( 'vocalstack_workspace' );
 delete_option( 'vocalstack_widget_policy' );
 delete_option( 'vocalstack_db_version' );
 wp_clear_scheduled_hook( 'vocalstack_poll' );

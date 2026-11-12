@@ -11,6 +11,7 @@ use VocalStack\WP\Jobs;
 use VocalStack\WP\Media;
 use VocalStack\WP\Settings;
 use VocalStack\WP\Transcriber\TranscriberError;
+use VocalStack\WP\Workspace;
 
 final class JobsTest extends TestCase {
 
@@ -187,6 +188,48 @@ final class JobsTest extends TestCase {
 		Jobs::start( $id );
 		$this->vs->fail = new TranscriberError( 'Timeout', 'http_error', 0 );
 		$this->assertSame( 'queued', Jobs::refresh( $id )['state'] );
+	}
+
+	public function test_a_job_started_in_another_workspace_says_so_in_plain_words(): void {
+		Workspace::remember( array( 'workspace' => array( 'id' => 'ws_old', 'name' => 'Old' ) ) );
+		$id = $this->audio();
+		Jobs::start( $id );
+		$this->assertSame( 'ws_old', get_post_meta( $id, Media::JOB, true )['workspaceId'] );
+
+		// Settings → Change: the site now holds a key of another workspace.
+		Settings::set_api_key( 'vs_key_elsewhere' );
+		Workspace::remember( array( 'workspace' => array( 'id' => 'ws_new', 'name' => 'New' ) ) );
+		$this->vs->fail = new TranscriberError( 'not found', 'not_found', 404 );
+		$this->unthrottle( $id );
+		$data = Jobs::refresh( $id );
+
+		$this->assertSame( 'failed', $data['state'] );
+		$this->assertSame( 'not_found', $data['errorCode'] );
+		$this->assertStringContainsString( 'belongs to another workspace', $data['error'] );
+		$this->assertStringContainsString( 'Transcribe the file again', $data['error'] );
+		$this->assertStringNotContainsString( 'not found', $data['error'] );
+	}
+
+	public function test_a_job_deleted_in_vocalstack_says_so(): void {
+		Workspace::remember( array( 'workspace' => array( 'id' => 'ws_1', 'name' => 'Acme' ) ) );
+		$id = $this->audio();
+		Jobs::start( $id );
+		$this->vs->fail = new TranscriberError( 'not found', 'not_found', 404 );
+		$this->unthrottle( $id );
+
+		$this->assertStringContainsString( 'no longer in VocalStack', Jobs::refresh( $id )['error'] );
+	}
+
+	public function test_a_missing_job_from_before_workspaces_names_both_reasons(): void {
+		$id = $this->audio();
+		Jobs::start( $id );
+		$this->vs->fail = new TranscriberError( 'not found', 'not_found', 404 );
+		$this->unthrottle( $id );
+
+		$error = Jobs::refresh( $id )['error'];
+
+		$this->assertStringContainsString( 'another workspace', $error );
+		$this->assertStringContainsString( 'deleted in VocalStack', $error );
 	}
 
 	public function test_stop_goes_back_to_the_last_transcript(): void {

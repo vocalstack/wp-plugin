@@ -11,4 +11,14 @@ export const dashboardUrl = ( config.dashboardUrl ?? 'https://app.vocalstack.com
 export const maxUploadSize = Number( config.maxUploadSize ?? 0 );
 export const previewUrl = config.previewUrl ?? '/?vocalstack_preview=1';
 
+
+let connectNotice = config.connectNotice ?? null;
+
+/** The outcome of a one-click Connect the administrator just came back from, once. */
+export function takeConnectNotice() {
+	const notice = connectNotice;
+	connectNotice = null;
+	return notice && typeof notice.text === 'string' ? notice : null;
+}
+
 export default config;

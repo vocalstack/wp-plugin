@@ -44,6 +44,15 @@ widget ticket and the site's policy before spending anything:
 - `GET widgets/player/source`: a short-lived media URL for a VocalStack
   recording, or the follow credentials for a live broadcast.
 
+**Connection.** `POST connect` starts one-click Connect and
+`admin-post.php?action=vocalstack_connect` finishes it (`src/Connect.php`):
+OAuth 2.0 authorization code with PKCE, the state and verifier kept in a
+transient per administrator, the code redeemed server to server, the key
+stored where a pasted key is. The pass-through still never forwards
+`connect/*`. `GET settings` carries the key's workspace (`src/Workspace.php`:
+kept with a fingerprint of the key it was read for, re-read hourly because the
+icon's link is signed for a limited time).
+
 ## Widget tickets: why a visitor can't tamper with a widget
 
 A widget's configuration (what it records into, max duration, who may use it,

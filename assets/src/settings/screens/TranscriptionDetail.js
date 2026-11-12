@@ -274,7 +274,12 @@ export default function TranscriptionDetail( { id } ) {
 			setT( fresh );
 			setRecordingId( ( current ) => current ?? fresh.job?.recordingId ?? fresh.currentRecording?.recordingId ?? fresh.lastRecording?.recordingId ?? null );
 		} catch ( e ) {
-			setError( errorMessage( e ) );
+			// The site's key reads one workspace: after Settings → Change, an older transcription is not found.
+			setError(
+				e?.code === 'not_found'
+					? __( 'This transcription is not in the workspace this site is connected to. It belongs to another workspace, or it was deleted in VocalStack. A Media Library file can be transcribed again.', 'vocalstack' )
+					: errorMessage( e )
+			);
 		}
 	}, [ id ] );
 

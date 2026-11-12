@@ -20,7 +20,7 @@ final class FakeHttp implements HttpClient {
 	/** @var array<string, list<array{0: int, 1: mixed, 2: array<string, string>}>> Answers by "METHOD /path", used in order (the last repeats). */
 	private array $routes = array();
 
-	/** @var list<array{method: string, path: string, query: string, headers: array<string, string>, body: mixed}> */
+	/** @var list<array{method: string, path: string, query: string, headers: array<string, string>, body: mixed, raw: ?string}> `raw` is the body as sent, for form posts. */
 	public array $sent = array();
 
 	public function on( string $method, string $path, int $status, $json = null, array $headers = array() ): self {
@@ -37,6 +37,7 @@ final class FakeHttp implements HttpClient {
 			'query'   => $parts['query'] ?? '',
 			'headers' => $headers,
 			'body'    => is_string( $body ) ? json_decode( $body, true ) : $body,
+			'raw'     => is_string( $body ) ? $body : null,
 		);
 		$key = "$method $path";
 		if ( empty( $this->routes[ $key ] ) ) {
