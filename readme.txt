@@ -82,7 +82,7 @@ One-click Connect needs a site served over https (or a local site on localhost).
 * The player's source is "A VocalStack transcription". Players and shortcodes saved with `source="recording"` keep working: a transcription id beside it plays as before, and a recording id says the transcription is no longer available; choose the transcription again in the block or the Widgets tab.
 * A broadcast's Transcriptions tab lists the transcriptions that fed it; a live transcription's detail shows its one transcript, with no recording picker.
 * Media Library jobs started before this version are followed by their transcription id.
-* Built on the VocalStack PHP SDK 3.0.
+* Built on the VocalStack PHP SDK 2.2.
 
 = 0.3.1 =
 * Change, next to the workspace, opens VocalStack's consent screen on the workspace the site is connected to.
