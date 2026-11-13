@@ -127,11 +127,10 @@ export default function LiveScreen( { broadcastId = '' } ) {
 				idempotent: true,
 				data: { name: ( name.trim() || defaultName() ).slice( 0, 120 ), source: audio, settings, broadcasts: broadcast ? [ broadcast.id ] : [] },
 			} );
-			const grant = await vs( `transcriptions/${ seg( transcription.id ) }/recordings`, { method: 'POST', idempotent: true, data: {} } );
+			const grant = await vs( `transcriptions/${ seg( transcription.id ) }/start`, { method: 'POST', idempotent: true, data: {} } );
 			setSession( {
 				transcriptionId: transcription.id,
 				name: transcription.name,
-				recordingId: grant.recording?.id,
 				streamUrl: grant.streamUrl,
 				stream,
 				pulled: ! fromBrowser,
@@ -214,8 +213,8 @@ export default function LiveScreen( { broadcastId = '' } ) {
 							) }
 							{ chosen && (
 								<p className="vsa-muted">
-									{ chosen.currentRecording?.state === 'live'
-										? __( 'This broadcast is live from another recording right now; starting takes it over.', 'vocalstack' )
+									{ chosen.currentTranscription?.state === 'live'
+										? __( 'This broadcast is live from another transcription right now; starting takes it over.', 'vocalstack' )
 										: sprintf( /* translators: %s: link */ __( 'Listeners follow it at %s.', 'vocalstack' ), ( chosen.shareUrl || '' ).replace( /^https?:\/\//, '' ) ) }
 								</p>
 							) }
@@ -334,9 +333,9 @@ function LiveSession( { session } ) {
 			<Card>
 				<CardBody>
 					{ session.pulled ? (
-						<PulledStream recordingId={ session.recordingId } onFinished={ done } />
+						<PulledStream transcriptionId={ session.transcriptionId } onFinished={ done } />
 					) : (
-						<LiveRecorder stream={ session.stream } recordingId={ session.recordingId } streamUrl={ session.streamUrl } onFinished={ done } pausable />
+						<LiveRecorder stream={ session.stream } transcriptionId={ session.transcriptionId } streamUrl={ session.streamUrl } onFinished={ done } pausable />
 					) }
 				</CardBody>
 			</Card>
@@ -345,7 +344,7 @@ function LiveSession( { session } ) {
 }
 
 /** A stream VocalStack pulls: its state and transcript, with pause, resume and stop. */
-function PulledStream( { recordingId, onFinished } ) {
+function PulledStream( { transcriptionId, onFinished } ) {
 	const [ recording, setRecording ] = useState( null );
 	const [ sentences, setSentences ] = useState( [] );
 	const [ busy, setBusy ] = useState( '' );
@@ -357,7 +356,7 @@ function PulledStream( { recordingId, onFinished } ) {
 		let live = true;
 		const poll = async () => {
 			try {
-				const [ r, t ] = await Promise.all( [ vs( `recordings/${ seg( recordingId ) }` ), vs( `recordings/${ seg( recordingId ) }/transcript` ) ] );
+				const [ r, t ] = await Promise.all( [ vs( `transcriptions/${ seg( transcriptionId ) }` ), vs( `transcriptions/${ seg( transcriptionId ) }/transcript` ) ] );
 				if ( ! live ) return;
 				setRecording( r );
 				setSentences( ( t?.sentences ?? [] ).filter( ( s ) => s.status !== 'dropped' && s.text?.trim() ) );
@@ -374,24 +373,24 @@ function PulledStream( { recordingId, onFinished } ) {
 			clearInterval( timer );
 			clearInterval( clockTimer );
 		};
-		// The recording is followed once for this component's life.
+		// The transcription is followed once for this component's life.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [ recordingId ] );
+	}, [ transcriptionId ] );
 
 	const act = async ( what ) => {
 		setBusy( what );
 		setError( '' );
 		try {
 			if ( what === 'stop' ) {
-				// VocalStack stops a live recording only once it is paused.
+				// VocalStack stops a live transcription only once it is paused.
 				if ( recording?.state === 'live' ) {
-					await vs( `recordings/${ seg( recordingId ) }/pause`, { method: 'POST' } );
+					await vs( `transcriptions/${ seg( transcriptionId ) }/pause`, { method: 'POST' } );
 				}
-				await vs( `recordings/${ seg( recordingId ) }/stop`, { method: 'POST', data: { reason: 'Stopped from WordPress' } } );
+				await vs( `transcriptions/${ seg( transcriptionId ) }/stop`, { method: 'POST', data: { reason: 'Stopped from WordPress' } } );
 				onFinished();
 				return;
 			}
-			setRecording( await vs( `recordings/${ seg( recordingId ) }/${ what }`, { method: 'POST' } ) );
+			setRecording( await vs( `transcriptions/${ seg( transcriptionId ) }/${ what }`, { method: 'POST' } ) );
 		} catch ( e ) {
 			setError( errorMessage( e ) );
 		} finally {

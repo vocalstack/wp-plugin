@@ -84,7 +84,6 @@ final class Jobs {
 			$id,
 			Media::JOB,
 			array(
-				'recordingId'     => (string) $started['recordingId'],
 				'transcriptionId' => (string) $started['transcriptionId'],
 				'idempotencyKey'  => $key,
 				// The workspace of the key that started it: another workspace's key can't read it.
@@ -111,7 +110,8 @@ final class Jobs {
 	 */
 	public static function refresh( int $id ): array {
 		$job = get_post_meta( $id, Media::JOB, true );
-		if ( ! in_array( get_post_meta( $id, Media::STATE, true ), Media::PENDING, true ) || ! is_array( $job ) || empty( $job['recordingId'] ) ) {
+		$tid = Media::transcription_id( $id );
+		if ( ! in_array( get_post_meta( $id, Media::STATE, true ), Media::PENDING, true ) || ! is_array( $job ) || '' === $tid ) {
 			return Media::data( $id );
 		}
 		$throttle = 'vocalstack_checked_' . $id;
@@ -122,10 +122,10 @@ final class Jobs {
 
 		$client = Plugin::transcriber();
 		try {
-			$remote = $client->job( $job['recordingId'] );
+			$remote = $client->job( $tid );
 			$state  = (string) ( $remote['state'] ?? '' );
 			if ( 'done' === $state ) {
-				Media::save_transcript( $id, $client->transcript( $job['recordingId'] ), $job['spokenLanguage'] ?? null );
+				Media::save_transcript( $id, $client->transcript( $tid ), $job['spokenLanguage'] ?? null );
 				$job['progress'] = array( 'pct' => 100 );
 				$job['error']    = null;
 				update_post_meta( $id, Media::JOB, $job );
@@ -142,7 +142,7 @@ final class Jobs {
 				update_post_meta( $id, Media::STATE, $state );
 			}
 		} catch ( TranscriberError $e ) {
-			// A 404 means this key can't read the recording; anything else may pass, so try again next time.
+			// A 404 means this key can't read the transcription; anything else may pass, so try again next time.
 			if ( 404 === $e->http_status ) {
 				self::fail( $id, self::missing_message( $job ), $e->error_code );
 			}
@@ -180,8 +180,11 @@ final class Jobs {
 		if ( ! in_array( get_post_meta( $id, Media::STATE, true ), Media::PENDING, true ) || ! is_array( $job ) ) {
 			return Media::data( $id );
 		}
+		$tid = Media::transcription_id( $id );
 		try {
-			Plugin::transcriber()->stop( $job['recordingId'] );
+			if ( '' !== $tid ) {
+				Plugin::transcriber()->stop( $tid );
+			}
 		} catch ( TranscriberError $e ) {
 			// Already finished or gone: nothing left to stop.
 			if ( 404 !== $e->http_status && 409 !== $e->http_status ) {

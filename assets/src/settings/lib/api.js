@@ -51,24 +51,15 @@ export function wp( path, options = {} ) {
 export const seg = ( id ) => encodeURIComponent( String( id ) );
 
 /**
- * Name a speaker in a transcript: on the transcription's appearances, or on the
- * recording's speakers where VocalStack does not have that route yet.
+ * Name a speaker in a transcript, on the transcription's appearances.
  *
- * @param {Object} where                   Which speaker.
- * @param {string} [where.transcriptionId] The transcription.
- * @param {string} where.recordingId       The recording.
- * @param {number} where.index             The speaker's index in the transcript.
- * @param {string} name                    The new name.
+ * @param {Object} where                 Which speaker.
+ * @param {string} where.transcriptionId The transcription.
+ * @param {number} where.index           The speaker's index in the transcript.
+ * @param {string} name                  The new name.
  */
-export async function nameSpeaker( { transcriptionId, recordingId, index }, name ) {
-	if ( transcriptionId ) {
-		try {
-			return await vs( `transcriptions/${ seg( transcriptionId ) }/appearances/${ seg( index ) }`, { method: 'PUT', data: { name } } );
-		} catch ( e ) {
-			if ( e?.code !== 'not_found' ) throw e;
-		}
-	}
-	return vs( `recordings/${ seg( recordingId ) }/speakers/${ seg( index ) }`, { method: 'PUT', data: { name } } );
+export function nameSpeaker( { transcriptionId, index }, name ) {
+	return vs( `transcriptions/${ seg( transcriptionId ) }/appearances/${ seg( index ) }`, { method: 'PUT', data: { name } } );
 }
 
 /**

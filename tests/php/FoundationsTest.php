@@ -52,16 +52,19 @@ final class FoundationsTest extends \WP_UnitTestCase {
 
 	public function test_allowlist(): void {
 		$this->assertTrue( Proxy::allowed( 'GET', 'transcriptions' ) );
-		$this->assertTrue( Proxy::allowed( 'GET', 'recordings/01a15558-9dde/transcript' ) );
+		$this->assertTrue( Proxy::allowed( 'GET', 'transcriptions/01a15558-9dde/transcript' ) );
+		$this->assertTrue( Proxy::allowed( 'POST', 'transcriptions/abc/start' ) );
+		$this->assertTrue( Proxy::allowed( 'POST', 'broadcasts/abc/record' ) );
+		$this->assertFalse( Proxy::allowed( 'GET', 'recordings/01a15558-9dde/transcript' ), 'VocalStack has no recordings routes any more.' );
 		$this->assertTrue( Proxy::allowed( 'POST', 'transcriptions/abc/purge' ) );
 		$this->assertTrue( Proxy::allowed( 'GET', 'rtmp' ) );
 		$this->assertFalse( Proxy::allowed( 'POST', 'rtmp' ) );
 		$this->assertFalse( Proxy::allowed( 'POST', 'connect/token' ) );
 		$this->assertFalse( Proxy::allowed( 'POST', 'billing/checkouts' ) );
 		$this->assertFalse( Proxy::allowed( 'DELETE', 'transcriptions/abc' ) );
-		$this->assertFalse( Proxy::allowed( 'GET', 'recordings/a/b/transcript' ) );
+		$this->assertFalse( Proxy::allowed( 'GET', 'transcriptions/a/b/transcript' ) );
 		$this->assertTrue( Proxy::allowed( 'PUT', 'transcriptions/abc/appearances/2' ) );
-		$this->assertTrue( Proxy::allowed( 'PUT', 'recordings/abc/speakers/2' ) );
+		$this->assertFalse( Proxy::allowed( 'PUT', 'recordings/abc/speakers/2' ) );
 	}
 
 	public function test_admins_reach_vocalstack_with_the_key(): void {

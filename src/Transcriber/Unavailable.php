@@ -55,30 +55,30 @@ final class Unavailable implements Transcriber {
 	/**
 	 * Refuses.
 	 *
-	 * @param string $recording_id Unused.
+	 * @param string $transcription_id Unused.
 	 * @throws TranscriberError Always.
 	 */
-	public function job( string $recording_id ): array {
+	public function job( string $transcription_id ): array {
 		throw $this->refuse();
 	}
 
 	/**
 	 * Refuses.
 	 *
-	 * @param string $recording_id Unused.
+	 * @param string $transcription_id Unused.
 	 * @throws TranscriberError Always.
 	 */
-	public function stop( string $recording_id ): void {
+	public function stop( string $transcription_id ): void {
 		throw $this->refuse();
 	}
 
 	/**
 	 * Refuses.
 	 *
-	 * @param string $recording_id Unused.
+	 * @param string $transcription_id Unused.
 	 * @throws TranscriberError Always.
 	 */
-	public function transcript( string $recording_id ): array {
+	public function transcript( string $transcription_id ): array {
 		throw $this->refuse();
 	}
 }

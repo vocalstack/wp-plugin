@@ -2,12 +2,12 @@
  * The player widget.
  *
  * - media: a Media Library file; its player and transcript are in the page.
- * - recording: a VocalStack recording; the audio URL (a media token, never
- *   the site's key) and transcript come from /widgets/player/source.
+ * - transcription: a VocalStack transcription; the audio URL (a media token,
+ *   never the site's key) and transcript come from /widgets/player/source.
  * - broadcast: a public broadcast. While it is live, the transcript arrives
  *   over VocalStack's listener socket (and, on request, live audio); between
- *   recordings the broadcast's events socket says when the next one starts,
- *   and the last recording plays meanwhile.
+ *   transcriptions the broadcast's events socket says when the next one
+ *   starts, and the last one plays meanwhile.
  */
 import { __, sprintf } from '@wordpress/i18n';
 import { api, boot, part, sleep, status } from '../shared/dom';
@@ -28,7 +28,7 @@ boot( 'player', ( root, config ) => {
 			view.link( media );
 			transcriptEl.classList.add( 'is-linked' );
 		}
-		// Another language needs the file's VocalStack recording: a media token, asked for once.
+		// Another language needs the file's VocalStack transcription: a media token, asked for once.
 		let token = null;
 		languages( root, config, view, media, {
 			token: async () => {
@@ -38,14 +38,14 @@ boot( 'player', ( root, config ) => {
 		} );
 		return;
 	}
-	if ( config.source === 'recording' ) {
-		recording( root, config, view, media );
+	if ( config.source === 'transcription' ) {
+		transcription( root, config, view, media );
 	} else {
 		broadcast( root, config, view, media );
 	}
 } );
 
-async function recording( root, config, view, media ) {
+async function transcription( root, config, view, media ) {
 	const line = part( root, 'status' );
 	try {
 		const data = await api( config, 'widgets/player/source', { params: { ticket: config.ticket } } );
@@ -69,7 +69,7 @@ async function recording( root, config, view, media ) {
  * @param {HTMLElement}      root   Widget root.
  * @param {Object}           config Widget configuration.
  * @param {TranscriptView}   view   The transcript, if shown.
- * @param {HTMLMediaElement} media  The player for finished recordings.
+ * @param {HTMLMediaElement} media  The player for finished transcriptions.
  */
 async function broadcast( root, config, view, media ) {
 	const line = part( root, 'status' );
@@ -140,25 +140,25 @@ async function broadcast( root, config, view, media ) {
 		live.querySelector( '.vocalstack-player__badge' )?.setAttribute( 'hidden', '' );
 		listen.hidden = true;
 		if ( view ) {
-			// A finished recording reads from its start; only a live one follows the end.
+			// A finished transcription reads from its start; only a live one follows the end.
 			view.options.live = false;
 		}
-		if ( source.last?.recordingId ) {
+		if ( source.last?.transcriptionId ) {
 			status( line, source.last.title ? `${ __( 'Last broadcast:', 'vocalstack' ) } ${ source.last.title }` : __( 'Not live right now. Here is the last broadcast.', 'vocalstack' ) );
 			media.src = source.last.audioUrl;
 			media.hidden = false;
-			loadBacklog( source.last.recordingId );
+			loadBacklog( source.last.transcriptionId );
 		} else {
 			status( line, __( 'Not live right now. The transcript appears here when the broadcast starts.', 'vocalstack' ) );
 		}
 	};
 
-	const loadBacklog = async ( recordingId, after = 0 ) => {
+	const loadBacklog = async ( transcriptionId, after = 0 ) => {
 		if ( ! view ) {
 			return 0;
 		}
 		try {
-			const data = await api( config, 'widgets/player/transcript', { params: { ticket: config.ticket, recording: recordingId, after, lang: isLive ? lc?.lang() || '' : '' } } );
+			const data = await api( config, 'widgets/player/transcript', { params: { ticket: config.ticket, transcription: transcriptionId, after, lang: isLive ? lc?.lang() || '' : '' } } );
 			if ( isLive ) {
 				data.sentences.forEach( ( s ) => upsertLive( s ) );
 			} else if ( ! after ) {
@@ -175,9 +175,9 @@ async function broadcast( root, config, view, media ) {
 		}
 	};
 
-	const goLive = ( recordingId ) => {
+	const goLive = ( transcriptionId ) => {
 		isLive = true;
-		liveId = recordingId;
+		liveId = transcriptionId;
 		raw.clear();
 		segmentTranslations.clear();
 		listener?.close();
@@ -196,8 +196,8 @@ async function broadcast( root, config, view, media ) {
 		listen.hidden = ! liveAudioSupported();
 		listen.setAttribute( 'aria-pressed', 'false' );
 		listen.textContent = __( 'Listen live', 'vocalstack' );
-		listener = subscribe( config, source, recordingId, lc?.lang() || '', {
-			ready: () => loadBacklog( recordingId ),
+		listener = subscribe( config, source, transcriptionId, lc?.lang() || '', {
+			ready: () => loadBacklog( transcriptionId ),
 			sentence: ( s ) => upsertLive( s ),
 			translated: ( frame ) => {
 				segmentTranslations.set( frame.seq, { ...segmentTranslations.get( frame.seq ), ...frame.translations } );
@@ -227,7 +227,7 @@ async function broadcast( root, config, view, media ) {
 	};
 
 	lc = languages( root, config, view, media, {
-		recording: () => ( isLive ? liveId : source.last?.recordingId ) || '',
+		transcription: () => ( isLive ? liveId : source.last?.transcriptionId ) || '',
 		isLive: () => isLive,
 		live: liveLanguage,
 	} );
@@ -264,37 +264,38 @@ async function broadcast( root, config, view, media ) {
 		listen.textContent = __( 'Stop listening', 'vocalstack' );
 	} );
 
-	if ( source.live?.recordingId && [ 'live', 'paused', 'pending' ].includes( source.live.state ) ) {
-		goLive( source.live.recordingId );
+	if ( source.live?.transcriptionId && [ 'live', 'paused', 'pending' ].includes( source.live.state ) ) {
+		goLive( source.live.transcriptionId );
 	} else {
 		showLast();
 	}
 
-	// Recordings start and end on the broadcast: follow them.
+	// Transcriptions start and end on the broadcast: follow them.
 	reconnecting( `${ config.socket }/v1/broadcasts/${ encodeURIComponent( source.broadcastId ) }/events`, {
 		message: ( frame ) => {
-			if ( frame.type === 'recording.started' && frame.recordingId ) {
-				goLive( frame.recordingId );
+			if ( frame.type === 'transcription.started' && frame.transcriptionId ) {
+				goLive( frame.transcriptionId );
 			}
 		},
 	} );
 }
 
 /**
- * The listener socket for one recording.
+ * The listener socket for one transcription.
  *
- * @param {Object} config      Widget configuration.
- * @param {Object} source      The broadcast.
- * @param {string} recordingId Recording.
- * @param {Object} on          Handlers: ready, sentence, draft, audio, ended.
+ * @param {Object} config          Widget configuration.
+ * @param {Object} source          The broadcast.
+ * @param {string} transcriptionId Transcription.
+ * @param {string} lang            The listener's language, or ''.
+ * @param {Object} on              Handlers: ready, sentence, draft, audio, ended.
  * @return {{close: Function, send: Function}} Controls.
  */
-function subscribe( config, source, recordingId, lang, on ) {
+function subscribe( config, source, transcriptionId, lang, on ) {
 	let lastSeq = 0;
 	let wantsAudio = false;
 	let wantsLang = lang;
 	// The listener's language rides on the address too, so a reconnect keeps it.
-	const address = () => `${ config.socket }/v1/recordings/${ encodeURIComponent( recordingId ) }/subscribe?role=listener${ wantsLang ? `&lang=${ encodeURIComponent( wantsLang ) }` : '' }`;
+	const address = () => `${ config.socket }/v1/transcriptions/${ encodeURIComponent( transcriptionId ) }/subscribe?role=listener${ wantsLang ? `&lang=${ encodeURIComponent( wantsLang ) }` : '' }`;
 	const url = address;
 	const socket = reconnecting( url, {
 		message: async ( frame ) => {

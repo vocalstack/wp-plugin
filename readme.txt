@@ -4,7 +4,7 @@ Tags: transcription, captions, podcast, speech to text, subtitles
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.3.1
+Stable tag: 0.4.0
 License: MIT
 License URI: https://opensource.org/licenses/MIT
 
@@ -31,7 +31,7 @@ What is sent, and when:
 
 * Transcribing a Media Library file (by clicking Transcribe, automatically on upload if you turn that on, or through an Upload widget): the file's address, or the file itself if your site is not reachable from the internet, with its title and your language and speaker settings. The plugin then asks VocalStack for progress and downloads the transcript.
 * Record widget: when a visitor allowed by your widget settings presses Record, your server creates a live transcription and the visitor's browser streams the audio from the chosen source (microphone or a browser tab) directly to VocalStack, which sends the transcript back to that browser. For a stream source you configure, VocalStack fetches the stream itself.
-* Player widget: playing a VocalStack recording loads its audio and transcript from VocalStack; following a public broadcast opens a connection from the visitor's browser to VocalStack to receive the live transcript and, if the visitor presses Listen, the live audio.
+* Player widget: playing a VocalStack transcription loads its audio and transcript from VocalStack; following a public broadcast opens a connection from the visitor's browser to VocalStack to receive the live transcript and, if the visitor presses Listen, the live audio.
 * Admin screens (Transcriptions, Broadcasts): your administrators' actions are sent to VocalStack through your server: listing, creating, renaming, sharing, exporting, archiving and deleting transcriptions and broadcasts.
 * Connecting or testing your key, opening the VocalStack page, and the Remaining card: the key's name, its workspace (name and icon), plan and balance are read. The workspace's icon is an image your administrators' browsers load from VocalStack.
 * One-click Connect: when an administrator presses Connect VocalStack or Change, their browser opens VocalStack's dashboard (https://app.vocalstack.com) with your site's name and the address to come back to. After they approve, your server exchanges the code VocalStack sent back for an API key.
@@ -76,6 +76,13 @@ In Settings, press Change next to the workspace and pick another one in VocalSta
 One-click Connect needs a site served over https (or a local site on localhost). On a plain http site, paste an API key.
 
 == Changelog ==
+
+= 0.4.0 =
+* Works with VocalStack's API where a transcription is one continuous transcript: everything the plugin reads, starts, pauses, stops, exports and plays is addressed by the transcription. Needs this version from the day VocalStack drops recordings from its API.
+* The player's source is "A VocalStack transcription". Players and shortcodes saved with `source="recording"` keep working: a transcription id beside it plays as before, and a recording id says the transcription is no longer available; choose the transcription again in the block or the Widgets tab.
+* A broadcast's Transcriptions tab lists the transcriptions that fed it; a live transcription's detail shows its one transcript, with no recording picker.
+* Media Library jobs started before this version are followed by their transcription id.
+* Built on the VocalStack PHP SDK 3.0.
 
 = 0.3.1 =
 * Change, next to the workspace, opens VocalStack's consent screen on the workspace the site is connected to.

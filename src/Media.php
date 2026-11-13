@@ -17,8 +17,9 @@ defined( 'ABSPATH' ) || exit;
  * - `_vocalstack_state`: '' (never transcribed), a job state (`queued`,
  *   `fetching`, `cropping`, `transcribing`), `done` or `failed`. Its own key
  *   so the poller can query unfinished jobs.
- * - `_vocalstack_job`: recordingId, transcriptionId, progress, error, errorCode,
- *   startedAt, idempotency key.
+ * - `_vocalstack_job`: transcriptionId, progress, error, errorCode, startedAt,
+ *   idempotency key. Jobs saved before 0.4.0 also carry a recordingId, which
+ *   VocalStack no longer answers to: only their transcriptionId is read.
  * - `_vocalstack_transcript`: the text, which editors can change.
  * - `_vocalstack_sentences`: `[{ start, end, speaker, text }]`, in seconds.
  * - `_vocalstack_language` (the main detected language), `_vocalstack_languages`
@@ -142,7 +143,6 @@ final class Media {
 			'progress'        => $job['progress'] ?? null,
 			'error'           => $job['error'] ?? null,
 			'errorCode'       => $job['errorCode'] ?? null,
-			'recordingId'     => $job['recordingId'] ?? null,
 			'transcriptionId' => (string) get_post_meta( $id, self::TRANSCRIPTION_ID, true ),
 			'transcript'      => (string) get_post_meta( $id, self::TRANSCRIPT, true ),
 			'sentences'       => self::sentences( $id ),
@@ -211,13 +211,14 @@ final class Media {
 	}
 
 	/**
-	 * The VocalStack recording behind the attachment's transcript, or ''.
+	 * The VocalStack transcription behind the attachment's transcript, or ''.
 	 *
 	 * @param int $id Attachment ID.
 	 */
-	public static function recording_id( int $id ): string {
+	public static function transcription_id( int $id ): string {
 		$job = get_post_meta( $id, self::JOB, true );
-		return is_array( $job ) ? (string) ( $job['recordingId'] ?? '' ) : '';
+		$tid = is_array( $job ) ? (string) ( $job['transcriptionId'] ?? '' ) : '';
+		return '' !== $tid ? $tid : (string) get_post_meta( $id, self::TRANSCRIPTION_ID, true );
 	}
 
 	/**

@@ -30,9 +30,24 @@ final class LanguagesTest extends \WP_UnitTestCase {
 			200,
 			array(
 				'languages'   => array(
-					array( 'code' => 'en', 'name' => 'English', 'native' => 'English', 'flag' => '🇬🇧' ),
-					array( 'code' => 'es', 'name' => 'Spanish', 'native' => 'Español', 'flag' => '🇪🇸' ),
-					array( 'code' => 'am', 'name' => 'Amharic', 'native' => 'አማርኛ', 'flag' => '🇪🇹' ),
+					array(
+						'code'   => 'en',
+						'name'   => 'English',
+						'native' => 'English',
+						'flag'   => '🇬🇧',
+					),
+					array(
+						'code'   => 'es',
+						'name'   => 'Spanish',
+						'native' => 'Español',
+						'flag'   => '🇪🇸',
+					),
+					array(
+						'code'   => 'am',
+						'name'   => 'Amharic',
+						'native' => 'አማርኛ',
+						'flag'   => '🇪🇹',
+					),
 				),
 				'translation' => array( 'en', 'es', 'am' ),
 				'voice'       => array( 'en', 'es' ),
@@ -54,13 +69,25 @@ final class LanguagesTest extends \WP_UnitTestCase {
 				'post_title'     => 'Clip',
 			)
 		);
-		update_post_meta( $id, Media::JOB, array( 'recordingId' => 'rec_9' ) );
+		update_post_meta(
+			$id,
+			Media::JOB,
+			array(
+				'recordingId'     => 'rec_9',
+				'transcriptionId' => 'tr_9',
+			)
+		);
 		update_post_meta( $id, Media::STATE, 'done' );
 		Media::save_transcript(
 			$id,
 			array(
 				'sentences' => array(
-					array( 'start' => 0, 'end' => 1, 'speaker' => 0, 'text' => 'Hello.' ),
+					array(
+						'start'   => 0,
+						'end'     => 1,
+						'speaker' => 0,
+						'text'    => 'Hello.',
+					),
 				),
 			)
 		);
@@ -97,23 +124,58 @@ final class LanguagesTest extends \WP_UnitTestCase {
 		$this->http
 			->on(
 				'GET',
-				'/v1/recordings/rec_9/transcript',
+				'/v1/transcriptions/tr_9/transcript',
 				200,
 				array(
 					'sentences' => array(
-						array( 'sentenceId' => 1, 'start' => 0, 'end' => 1, 'speaker' => 0, 'text' => 'Hello.', 'translations' => array( 'es' => 'Hola.' ) ),
-						array( 'sentenceId' => 2, 'start' => 1, 'end' => 2, 'speaker' => 0, 'text' => 'Goodbye.' ),
-						array( 'sentenceId' => 3, 'start' => 2, 'end' => 3, 'speaker' => 0, 'text' => '', 'suppressed' => true ),
+						array(
+							'sentenceId'   => 1,
+							'start'        => 0,
+							'end'          => 1,
+							'speaker'      => 0,
+							'text'         => 'Hello.',
+							'translations' => array( 'es' => 'Hola.' ),
+						),
+						array(
+							'sentenceId' => 2,
+							'start'      => 1,
+							'end'        => 2,
+							'speaker'    => 0,
+							'text'       => 'Goodbye.',
+						),
+						array(
+							'sentenceId' => 3,
+							'start'      => 2,
+							'end'        => 3,
+							'speaker'    => 0,
+							'text'       => '',
+							'suppressed' => true,
+						),
 					),
 				)
 			)
-			->on( 'GET', '/v1/recordings/rec_9/translation', 200, array( 'lang' => 'es', 'translations' => array( '2' => 'Adiós.' ) ) )
 			->on(
 				'GET',
-				'/v1/recordings/rec_9/voice',
+				'/v1/transcriptions/tr_9/translation',
 				200,
 				array(
-					array( 'lang' => 'es', 'voiceKey' => '', 'state' => 'clips', 'clips' => array( 1 ), 'clipParts' => array( '2' => 2 ), 'clipRev' => array( '1' => 'r1' ) ),
+					'lang'         => 'es',
+					'translations' => array( '2' => 'Adiós.' ),
+				)
+			)
+			->on(
+				'GET',
+				'/v1/transcriptions/tr_9/voice',
+				200,
+				array(
+					array(
+						'lang'      => 'es',
+						'voiceKey'  => '',
+						'state'     => 'clips',
+						'clips'     => array( 1 ),
+						'clipParts' => array( '2' => 2 ),
+						'clipRev'   => array( '1' => 'r1' ),
+					),
 				)
 			);
 		$widget = array(
@@ -139,11 +201,18 @@ final class LanguagesTest extends \WP_UnitTestCase {
 	public function test_a_text_only_language_says_so(): void {
 		$this->http->on(
 			'GET',
-			'/v1/recordings/rec_9/transcript',
+			'/v1/transcriptions/tr_9/transcript',
 			200,
 			array(
 				'sentences' => array(
-					array( 'sentenceId' => 1, 'start' => 0, 'end' => 1, 'speaker' => 0, 'text' => 'Hello.', 'translations' => array( 'am' => 'ሰላም' ) ),
+					array(
+						'sentenceId'   => 1,
+						'start'        => 0,
+						'end'          => 1,
+						'speaker'      => 0,
+						'text'         => 'Hello.',
+						'translations' => array( 'am' => 'ሰላም' ),
+					),
 				),
 			)
 		);
@@ -189,12 +258,20 @@ final class LanguagesTest extends \WP_UnitTestCase {
 	public function test_the_live_backlog_comes_in_the_listeners_language(): void {
 		$this->http->on(
 			'GET',
-			'/v1/recordings/rec_live/transcript',
+			'/v1/transcriptions/tr_live/transcript',
 			200,
 			array(
 				'lastSeq'   => 4,
 				'sentences' => array(
-					array( 'sentenceId' => 1, 'start' => 0, 'end' => 1, 'speaker' => 0, 'text' => 'Hello.', 'seqs' => array( 3, 4 ), 'translations' => array( 'es' => 'Hola.' ) ),
+					array(
+						'sentenceId'   => 1,
+						'start'        => 0,
+						'end'          => 1,
+						'speaker'      => 0,
+						'text'         => 'Hello.',
+						'seqs'         => array( 3, 4 ),
+						'translations' => array( 'es' => 'Hola.' ),
+					),
 				),
 			)
 		);
@@ -212,7 +289,7 @@ final class LanguagesTest extends \WP_UnitTestCase {
 				)
 			)
 		);
-		$request->set_param( 'recording', 'rec_live' );
+		$request->set_param( 'transcription', 'tr_live' );
 		$request->set_param( 'lang', 'es' );
 
 		$data = rest_get_server()->dispatch( $request )->get_data();

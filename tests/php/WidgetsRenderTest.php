@@ -103,10 +103,19 @@ final class WidgetsRenderTest extends TestCase {
 		$this->assertSame( '', do_shortcode( '[vocalstack_player id="999999"]' ) );
 	}
 
-	public function test_a_recording_player_loads_its_source_in_the_browser(): void {
+	public function test_a_transcription_player_loads_its_source_in_the_browser(): void {
+		$html   = do_shortcode( '[vocalstack_player source="transcription" id="tr_1" timestamps="0"]' );
+		$config = $this->config( $html );
+		$this->assertSame( 'transcription', $config['source'] );
+		$this->assertFalse( $config['timestamps'] );
+		$this->assertSame( 'tr_1', Ticket::verify( $config['ticket'] )['id'] );
+		$this->assertStringContainsString( 'data-part="status"', $html );
+	}
+
+	public function test_a_player_saved_as_a_recording_player_reads_as_a_transcription_player(): void {
 		$html   = do_shortcode( '[vocalstack_player source="recording" id="tr_1" timestamps="0"]' );
 		$config = $this->config( $html );
-		$this->assertSame( 'recording', $config['source'] );
+		$this->assertSame( 'transcription', $config['source'] );
 		$this->assertFalse( $config['timestamps'] );
 		$this->assertSame( 'tr_1', Ticket::verify( $config['ticket'] )['id'] );
 		$this->assertStringContainsString( 'data-part="status"', $html );

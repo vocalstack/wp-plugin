@@ -8,7 +8,7 @@ import { bareUrl, captureClass, CAPTURE_LABEL, clock, isVideo, youtubeId } from 
 export const RUNNING = [ 'queued', 'fetching', 'cropping', 'transcribing' ];
 
 /** Whether a live transcription is recording now. */
-export const isRecording = ( t ) => [ 'live', 'paused', 'pending' ].includes( t?.currentRecording?.state );
+export const isRecording = ( t ) => Boolean( t?.live ) && [ 'live', 'paused', 'pending' ].includes( t?.state );
 
 /** The audio length in seconds of a file or link job. */
 export function jobLength( job ) {
@@ -71,26 +71,23 @@ export function sourceLineOf( t ) {
 
 /** The date the row sorts and shows by. */
 export function atOf( t ) {
-	if ( t.live ) return t.currentRecording?.startedAt ?? t.lastRecording?.startedAt ?? t.lastRecordedAt ?? t.createdAt;
+	if ( t.live ) return t.startedAt ?? t.createdAt;
 	return t.job?.createdAt ?? t.createdAt;
 }
-
-/** The recording a transcription's detail opens on. */
-export const recordingIdOf = ( t ) => t?.job?.recordingId ?? t?.currentRecording?.recordingId ?? t?.lastRecording?.recordingId ?? null;
 
 /** The row model. */
 export function txRow( t ) {
 	const recording = isRecording( t );
 	let len;
 	if ( t.live ) {
-		len = recording ? __( 'LIVE', 'vocalstack' ) : t.lastRecording?.durationS ? clock( t.lastRecording.durationS ) : '—';
+		len = recording ? __( 'LIVE', 'vocalstack' ) : t.durationS ? clock( t.durationS ) : '—';
 	} else {
 		const s = jobLength( t.job );
 		len = s ? clock( s ) : '—';
 	}
 	return {
 		id: t.id,
-		title: ( t.live && t.lastRecording?.title?.trim() ) || t.name || __( 'Untitled', 'vocalstack' ),
+		title: ( t.live && t.title?.trim() ) || t.name || __( 'Untitled', 'vocalstack' ),
 		icon: iconOf( t ),
 		api: Boolean( t.createdByApiKeyId ),
 		broadcasts: t.live ? ( t.broadcasts ?? [] ) : null,

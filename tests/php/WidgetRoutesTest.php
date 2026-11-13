@@ -51,12 +51,12 @@ final class WidgetRoutesTest extends \WP_UnitTestCase {
 			->on( 'POST', '/v1/transcriptions/live', 201, array( 'id' => 'tr_live' ) )
 			->on(
 				'POST',
-				'/v1/transcriptions/tr_live/recordings',
+				'/v1/transcriptions/tr_live/start',
 				201,
 				array(
-					'recording' => array( 'id' => 'rec_live' ),
-					'streamUrl' => 'wss://api.example/v1/realtime/sessions/tok/socket',
-					'expiresAt' => '2026-10-19T20:00:00Z',
+					'transcription' => array( 'id' => 'tr_live' ),
+					'streamUrl'     => 'wss://api.example/v1/realtime/sessions/tok/socket',
+					'expiresAt'     => '2026-10-19T20:00:00Z',
 				)
 			);
 	}
@@ -81,6 +81,9 @@ final class WidgetRoutesTest extends \WP_UnitTestCase {
 		$data = $response->get_data();
 		$this->assertSame( 'wss://api.example/v1/realtime/sessions/tok/socket', $data['streamUrl'] );
 		$this->assertSame( 300, $data['maxSeconds'] );
+		$this->assertSame( 'tr_live', $data['transcriptionId'] );
+		$this->assertArrayNotHasKey( 'recordingId', $data );
+		$this->assertSame( 'POST /v1/transcriptions/tr_live/start', $this->http->calls()[1] );
 		$this->assertStringNotContainsString( 'vs_key', wp_json_encode( $data ) );
 
 		$live = $this->http->sent[0]['body'];
@@ -92,10 +95,10 @@ final class WidgetRoutesTest extends \WP_UnitTestCase {
 	}
 
 	public function test_a_forged_ticket_starts_nothing(): void {
-		$ticket                  = $this->record_ticket();
-		[ , $signature ]         = explode( '.', $ticket );
-		$forged                  = rtrim( strtr( base64_encode( '{"type":"record","sources":["mic"],"maxRecordMinutes":999}' ), '+/', '-_' ), '=' ) . '.' . $signature;
-		$response                = $this->call( 'POST', 'widgets/record/start', array( 'ticket' => $forged ) );
+		$ticket          = $this->record_ticket();
+		[ , $signature ] = explode( '.', $ticket );
+		$forged          = rtrim( strtr( base64_encode( '{"type":"record","sources":["mic"],"maxRecordMinutes":999}' ), '+/', '-_' ), '=' ) . '.' . $signature;
+		$response        = $this->call( 'POST', 'widgets/record/start', array( 'ticket' => $forged ) );
 		$this->assertSame( 400, $response->get_status() );
 		$this->assertSame( array(), $this->http->sent );
 	}
@@ -133,7 +136,7 @@ final class WidgetRoutesTest extends \WP_UnitTestCase {
 	public function test_a_stream_source_is_pulled_by_vocalstack(): void {
 		$this->http
 			->on( 'POST', '/v1/transcriptions/live', 201, array( 'id' => 'tr_live' ) )
-			->on( 'POST', '/v1/transcriptions/tr_live/recordings', 201, array( 'recording' => array( 'id' => 'rec_live' ) ) );
+			->on( 'POST', '/v1/transcriptions/tr_live/start', 201, array( 'transcription' => array( 'id' => 'tr_live' ) ) );
 		$response = $this->call(
 			'POST',
 			'widgets/record/start',
@@ -154,7 +157,15 @@ final class WidgetRoutesTest extends \WP_UnitTestCase {
 	}
 
 	public function test_a_refused_start_gives_the_minutes_back(): void {
-		$this->http->on( 'POST', '/v1/transcriptions/live', 429, array( 'code' => 'quota_exceeded', 'message' => 'one at a time' ) );
+		$this->http->on(
+			'POST',
+			'/v1/transcriptions/live',
+			429,
+			array(
+				'code'    => 'quota_exceeded',
+				'message' => 'one at a time',
+			)
+		);
 		$response = $this->call( 'POST', 'widgets/record/start', array( 'ticket' => $this->record_ticket() ) );
 		$this->assertSame( 409, $response->get_status() );
 		$this->assertStringContainsString( 'Someone else is recording', $response->get_data()['message'] );
@@ -165,22 +176,22 @@ final class WidgetRoutesTest extends \WP_UnitTestCase {
 		$this->vocalstack_starts_a_recording();
 		$session = $this->call( 'POST', 'widgets/record/start', array( 'ticket' => $this->record_ticket( array( 'max_record_minutes' => 10 ) ) ) )->get_data()['session'];
 		$this->http
-			->on( 'GET', '/v1/recordings/rec_live', 200, array( 'state' => 'live' ) )
-			->on( 'POST', '/v1/recordings/rec_live/pause', 200, array( 'state' => 'paused' ) )
+			->on( 'GET', '/v1/transcriptions/tr_live', 200, array( 'state' => 'live' ) )
+			->on( 'POST', '/v1/transcriptions/tr_live/pause', 200, array( 'state' => 'paused' ) )
 			->on(
 				'POST',
-				'/v1/recordings/rec_live/stop',
+				'/v1/transcriptions/tr_live/stop',
 				200,
 				array(
-					'state'          => 'ended',
-					'mediaDurationS' => 42.3,
+					'state'     => 'ended',
+					'durationS' => 42.3,
 				)
 			);
 
 		$response = $this->call( 'POST', 'widgets/record/stop', array( 'session' => $session ) );
 
 		$this->assertSame( 200, $response->get_status() );
-		$this->assertSame( array( 'GET /v1/recordings/rec_live', 'POST /v1/recordings/rec_live/pause', 'POST /v1/recordings/rec_live/stop' ), array_slice( $this->http->calls(), 2 ) );
+		$this->assertSame( array( 'GET /v1/transcriptions/tr_live', 'POST /v1/transcriptions/tr_live/pause', 'POST /v1/transcriptions/tr_live/stop' ), array_slice( $this->http->calls(), 2 ) );
 		$this->assertSame( 43, Policy::used( Policy::visitor(), 'record' )['seconds'] );
 	}
 
@@ -198,7 +209,7 @@ final class WidgetRoutesTest extends \WP_UnitTestCase {
 			201,
 			array(
 				'id'  => 'tr_up',
-				'job' => array( 'recordingId' => 'rec_up' ),
+				'job' => array( 'transcriptionId' => 'tr_up' ),
 			)
 		);
 		$tmp = wp_tempnam( 'clip.mp3' );
@@ -232,21 +243,21 @@ final class WidgetRoutesTest extends \WP_UnitTestCase {
 		$this->assertSame( 1, Policy::used( Policy::visitor(), 'upload' )['count'] );
 	}
 
-	public function test_player_source_for_a_recording_carries_a_media_token_not_the_key(): void {
+	public function test_player_source_for_a_transcription_carries_a_media_token_not_the_key(): void {
 		$this->http
-			->on( 'GET', '/v1/transcriptions/tr_1', 200, array( 'job' => array( 'recordingId' => 'rec_1' ) ) )
 			->on(
 				'GET',
-				'/v1/recordings/rec_1',
+				'/v1/transcriptions/tr_1',
 				200,
 				array(
-					'title'          => 'Sermon',
-					'mediaDurationS' => 60,
+					'id'        => 'tr_1',
+					'title'     => 'Sermon',
+					'durationS' => 60,
 				)
 			)
 			->on(
 				'GET',
-				'/v1/recordings/rec_1/media-token',
+				'/v1/transcriptions/tr_1/media-token',
 				200,
 				array(
 					'token'     => 'mt_abc',
@@ -255,7 +266,7 @@ final class WidgetRoutesTest extends \WP_UnitTestCase {
 			)
 			->on(
 				'GET',
-				'/v1/recordings/rec_1/transcript',
+				'/v1/transcriptions/tr_1/transcript',
 				200,
 				array(
 					'speakerLabels' => 'auto',
@@ -275,7 +286,7 @@ final class WidgetRoutesTest extends \WP_UnitTestCase {
 			Widgets::options(
 				'player',
 				array(
-					'source' => 'recording',
+					'source' => 'transcription',
 					'id'     => 'tr_1',
 				)
 			)
@@ -283,9 +294,67 @@ final class WidgetRoutesTest extends \WP_UnitTestCase {
 
 		$data = $this->call( 'GET', 'widgets/player/source', array( 'ticket' => $ticket ) )->get_data();
 
-		$this->assertSame( 'https://api.vocalstack.com/v1/recordings/rec_1/audio?kind=delivery&format=mp3&media=mt_abc', $data['audioUrl'] );
+		$this->assertSame( 'https://api.vocalstack.com/v1/transcriptions/tr_1/audio?kind=delivery&format=mp3&media=mt_abc', $data['audioUrl'] );
+		$this->assertSame( 'tr_1', $data['transcriptionId'] );
+		$this->assertSame( 'Sermon', $data['title'] );
+		$this->assertSame( 60.0, $data['duration'] );
 		$this->assertSame( 'Hi.', $data['sentences'][0]['text'] );
 		$this->assertStringNotContainsString( 'vs_key', wp_json_encode( $data ) );
+	}
+
+	public function test_a_player_saved_with_a_recording_id_says_it_is_not_available(): void {
+		$ticket = Widgets::ticket(
+			'player',
+			Widgets::options(
+				'player',
+				array(
+					'source' => 'recording',
+					'id'     => 'rec_old',
+				)
+			)
+		);
+
+		$response = $this->call( 'GET', 'widgets/player/source', array( 'ticket' => $ticket ) );
+
+		$this->assertSame( 404, $response->get_status() );
+		$this->assertSame( 'This transcription is no longer available.', $response->get_data()['message'] );
+		$this->assertSame( array( 'GET /v1/transcriptions/rec_old' ), $this->http->calls() );
+	}
+
+	public function test_a_broadcast_follows_its_current_transcription(): void {
+		$this->http->on(
+			'GET',
+			'/v1/broadcasts/b_1',
+			200,
+			array(
+				'id'                   => 'b_1',
+				'access'               => 'public',
+				'currentTranscription' => array(
+					'transcriptionId' => 'tr_now',
+					'state'           => 'live',
+				),
+				'lastTranscription'    => array(
+					'transcriptionId' => 'tr_before',
+					'title'           => 'Monday',
+				),
+			)
+		);
+		$ticket = Widgets::ticket(
+			'player',
+			Widgets::options(
+				'player',
+				array(
+					'source' => 'broadcast',
+					'id'     => 'b_1',
+				)
+			)
+		);
+
+		$data = $this->call( 'GET', 'widgets/player/source', array( 'ticket' => $ticket ) )->get_data();
+
+		$this->assertSame( 'tr_now', $data['live']['transcriptionId'] );
+		$this->assertSame( 'tr_before', $data['last']['transcriptionId'] );
+		$this->assertSame( 'https://api.vocalstack.com/v1/transcriptions/tr_before/audio?kind=delivery&format=mp3', $data['last']['audioUrl'] );
 	}
 
 	public function test_a_private_broadcast_cannot_be_followed(): void {
@@ -314,7 +383,7 @@ final class WidgetRoutesTest extends \WP_UnitTestCase {
 	public function test_a_broadcast_transcript_is_read_without_the_key(): void {
 		$this->http->on(
 			'GET',
-			'/v1/recordings/rec_b/transcript',
+			'/v1/transcriptions/tr_b/transcript',
 			200,
 			array(
 				'lastSeq'   => 9,
@@ -336,8 +405,8 @@ final class WidgetRoutesTest extends \WP_UnitTestCase {
 			'GET',
 			'widgets/player/transcript',
 			array(
-				'ticket'    => $ticket,
-				'recording' => 'rec_b',
+				'ticket'        => $ticket,
+				'transcription' => 'tr_b',
 			)
 		)->get_data();
 

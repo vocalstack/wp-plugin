@@ -2,7 +2,7 @@
  * A spoken translation, played a sentence at a time.
  *
  * VocalStack speaks any line of a recording on demand in a language it has a
- * voice for: `GET /v1/recordings/{id}/voice/{sentence}?lang=` answers with
+ * voice for: `GET /v1/transcriptions/{id}/voice/{sentence}?lang=` answers with
  * that line as audio (Ogg/Opus, or CAF for Apple's media stack). Its own
  * reader plays a recording in another language this way, one line after
  * another through one audio element, fetching the next lines ahead; this does
@@ -53,17 +53,17 @@ export default class VoiceQueue {
 	}
 
 	/**
-	 * A finished recording's lines, in reading order.
+	 * A finished transcription's lines, in reading order.
 	 *
 	 * @param {Object} reading
-	 * @param {string} reading.api         API origin.
-	 * @param {string} reading.recordingId Recording.
-	 * @param {string} reading.lang        Language.
-	 * @param {Array}  reading.sentences   `{id}` in reading order.
-	 * @param {Object} reading.clips       `parts`, `rev` by sentence id.
-	 * @param {string} reading.media       A media token, or '' (a public broadcast needs none).
+	 * @param {string} reading.api             API origin.
+	 * @param {string} reading.transcriptionId Transcription.
+	 * @param {string} reading.lang            Language.
+	 * @param {Array}  reading.sentences       `{id}` in reading order.
+	 * @param {Object} reading.clips           `parts`, `rev` by sentence id.
+	 * @param {string} reading.media           A media token, or '' (a public broadcast needs none).
 	 */
-	load( { api, recordingId, lang, sentences, clips = {}, media = '' } ) {
+	load( { api, transcriptionId, lang, sentences, clips = {}, media = '' } ) {
 		this.stop();
 		this.finite = true;
 		const format = voiceFormat();
@@ -80,7 +80,7 @@ export default class VoiceQueue {
 				if ( media ) {
 					q.set( 'media', media );
 				}
-				return { id: s.id, src: `${ api }/v1/recordings/${ encodeURIComponent( recordingId ) }/voice/${ s.id }?${ q }` };
+				return { id: s.id, src: `${ api }/v1/transcriptions/${ encodeURIComponent( transcriptionId ) }/voice/${ s.id }?${ q }` };
 			} );
 		} );
 	}

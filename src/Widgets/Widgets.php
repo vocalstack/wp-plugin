@@ -30,7 +30,7 @@ final class Widgets {
 			'player' => array(
 				'source'     => array(
 					'default' => 'media',
-					'type'    => 'enum:media|recording|broadcast',
+					'type'    => 'enum:media|transcription|broadcast',
 				),
 				'id'         => array(
 					'default' => '',
@@ -146,6 +146,10 @@ final class Widgets {
 		foreach ( $input as $key => $value ) {
 			$normal[ lcfirst( str_replace( ' ', '', ucwords( str_replace( array( '_', '-' ), ' ', (string) $key ) ) ) ) ] = $value;
 			$normal[ (string) $key ] = $value;
+		}
+		// Players saved before 0.4.0 say `source="recording"`: the id beside it is played as a transcription.
+		if ( 'player' === $type && 'recording' === ( $normal['source'] ?? null ) ) {
+			$normal['source'] = 'transcription';
 		}
 		$out = array();
 		foreach ( $schema as $key => $spec ) {

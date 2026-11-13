@@ -9,10 +9,12 @@ import { InspectorControls, MediaPicker, PanelBody, Preview, SelectControl, Text
 import metadata from './block.json';
 
 function Edit( { attributes, setAttributes } ) {
-	const { source, id, transcript, timestamps, speakers, title } = attributes;
+	const { id, transcript, timestamps, speakers, title } = attributes;
+	// Blocks saved before 0.4.0 say `recording`: the id beside it is played as a transcription.
+	const source = attributes.source === 'recording' ? 'transcription' : attributes.source;
 	const blockProps = useBlockProps();
 	const idHelp = {
-		recording: __( 'A transcription or recording id from the VocalStack page (Transcriptions).', 'vocalstack' ),
+		transcription: __( 'A transcription id from the VocalStack page (Transcriptions).', 'vocalstack' ),
 		broadcast: __( 'A public broadcast’s id from the VocalStack page (Broadcasts). Private broadcasts can’t be followed here.', 'vocalstack' ),
 	};
 
@@ -25,7 +27,7 @@ function Edit( { attributes, setAttributes } ) {
 						value={ source }
 						options={ [
 							{ value: 'media', label: __( 'A Media Library file', 'vocalstack' ) },
-							{ value: 'recording', label: __( 'A VocalStack recording', 'vocalstack' ) },
+							{ value: 'transcription', label: __( 'A VocalStack transcription', 'vocalstack' ) },
 							{ value: 'broadcast', label: __( 'A live broadcast', 'vocalstack' ) },
 						] }
 						onChange={ ( value ) => setAttributes( { source: value, id: '' } ) }

@@ -34,35 +34,35 @@ interface Transcriber {
 	 * Start a transcription, `POST /v1/transcriptions`.
 	 *
 	 * @param Source               $source          Where the audio comes from.
-	 * @param string               $name            The recording's name in VocalStack.
+	 * @param string               $name            The transcription's name in VocalStack.
 	 * @param string               $idempotency_key The same key never starts two jobs.
 	 * @param array<string, mixed> $settings        VocalStack's transcription settings, by their wire
 	 *                                              names: `spokenLanguage` (absent to auto-detect),
 	 *                                              `speakerLabels` (`off`, `auto` or `on`).
-	 * @return array{recordingId: string, transcriptionId: string}
+	 * @return array{transcriptionId: string}
 	 */
 	public function start( Source $source, string $name, string $idempotency_key, array $settings = array() ): array;
 
 	/**
-	 * The job's state, `GET /v1/recordings/{id}/job`.
+	 * The job's state, `GET /v1/transcriptions/{id}/job`.
 	 *
-	 * @param string $recording_id The recording.
+	 * @param string $transcription_id The transcription.
 	 * @return array{state: string, progress?: array<string, mixed>, error?: ?string, errorCode?: ?string}
 	 */
-	public function job( string $recording_id ): array;
+	public function job( string $transcription_id ): array;
 
 	/**
-	 * Stop a job before it finishes, `POST /v1/recordings/{id}/stop`.
+	 * Stop a job before it finishes, `POST /v1/transcriptions/{id}/stop`.
 	 *
-	 * @param string $recording_id The recording.
+	 * @param string $transcription_id The transcription.
 	 */
-	public function stop( string $recording_id ): void;
+	public function stop( string $transcription_id ): void;
 
 	/**
-	 * The finished transcript, `GET /v1/recordings/{id}/transcript`.
+	 * The finished transcript, `GET /v1/transcriptions/{id}/transcript`.
 	 *
-	 * @param string $recording_id The recording.
+	 * @param string $transcription_id The transcription.
 	 * @return array{lang?: ?string, sentences: list<array<string, mixed>>, segments?: list<array<string, mixed>>}
 	 */
-	public function transcript( string $recording_id ): array;
+	public function transcript( string $transcription_id ): array;
 }

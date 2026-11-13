@@ -24,7 +24,7 @@ final class SdkTranscriberTest extends \WP_UnitTestCase {
 		add_filter(
 			'pre_http_request',
 			function ( $pre, $args, $url ) {
-				$this->requests[]        = array(
+				$this->requests[]  = array(
 					'method'  => $args['method'],
 					'url'     => $url,
 					'headers' => $args['headers'],
@@ -67,8 +67,8 @@ final class SdkTranscriberTest extends \WP_UnitTestCase {
 			array(
 				'id'  => 'tr_9',
 				'job' => array(
-					'recordingId' => 'rec_9',
-					'state'       => 'queued',
+					'transcriptionId' => 'tr_9',
+					'state'           => 'queued',
 				),
 			),
 		);
@@ -83,13 +83,7 @@ final class SdkTranscriberTest extends \WP_UnitTestCase {
 			)
 		);
 
-		$this->assertSame(
-			array(
-				'recordingId'     => 'rec_9',
-				'transcriptionId' => 'tr_9',
-			),
-			$started
-		);
+		$this->assertSame( array( 'transcriptionId' => 'tr_9' ), $started );
 		$request = $this->requests[0];
 		$this->assertSame( 'POST', $request['method'] );
 		$this->assertSame( 'https://api.example.test/v1/transcriptions', $request['url'] );
@@ -105,11 +99,16 @@ final class SdkTranscriberTest extends \WP_UnitTestCase {
 		$this->answers[] = array( 200, array( 'state' => 'done' ) );
 		$this->answers[] = array( 200, array( 'sentences' => array() ) );
 
-		$this->client()->job( 'rec 1' );
-		$this->client()->transcript( 'rec 1' );
+		$this->answers[] = array( 200, array( 'state' => 'ended' ) );
 
-		$this->assertSame( 'https://api.example.test/v1/recordings/rec%201/job', $this->requests[0]['url'] );
-		$this->assertStringStartsWith( 'https://api.example.test/v1/recordings/rec%201/transcript', $this->requests[1]['url'] );
+		$this->client()->job( 'tr 1' );
+		$this->client()->transcript( 'tr 1' );
+		$this->client()->stop( 'tr 1' );
+
+		$this->assertSame( 'https://api.example.test/v1/transcriptions/tr%201/job', $this->requests[0]['url'] );
+		$this->assertStringStartsWith( 'https://api.example.test/v1/transcriptions/tr%201/transcript', $this->requests[1]['url'] );
+		$this->assertSame( 'POST', $this->requests[2]['method'] );
+		$this->assertSame( 'https://api.example.test/v1/transcriptions/tr%201/stop', $this->requests[2]['url'] );
 	}
 
 	public function test_api_errors_become_transcriber_errors(): void {

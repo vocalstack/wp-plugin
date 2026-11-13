@@ -13,7 +13,7 @@ public widgets, without ever giving a browser the site's API key.
 | Admin look | WordPress-native styling, dashboard layout and information. |
 | Admin actions | Create, edit, archive/restore, purge (typed confirmation). |
 | Widgets | Audio player, Record (live transcript; microphone, tab/screen audio, stream URL), Upload. Each is a block **and** a shortcode, one renderer. |
-| Player sources | Media Library files, VocalStack recordings, live broadcasts. |
+| Player sources | Media Library files, VocalStack transcriptions, live broadcasts. |
 | Upload target | Media Library attachment, then transcribed. |
 | Widget access | The site owner decides per widget (everyone / logged-in / roles) with limits. |
 | Styling | CSS custom properties + stable classes, theme template overrides, theme.json / block supports. |
@@ -28,7 +28,7 @@ of forty hand-written routes. It:
 - requires the `vocalstack_manage` capability (administrators by default; a
   site can grant it to other roles) and WordPress's REST nonce;
 - forwards only an allowlist of method + path patterns (transcriptions,
-  broadcasts, recordings, share links, languages, billing reads), never
+  broadcasts, share links, languages, billing reads), never
   `connect/*`, billing writes or anything not listed;
 - adds the key server-side, streams uploads, and passes VocalStack's status
   and error envelope through unchanged so the UI shows VocalStack's messages.
@@ -37,12 +37,12 @@ of forty hand-written routes. It:
 widget ticket and the site's policy before spending anything:
 
 - `POST widgets/record/start`: creates the live transcription, returns a
-  short-lived publish token and socket URL for that one recording.
+  short-lived publish token and socket URL for that one transcription.
 - `POST widgets/record/stop`.
 - `POST widgets/upload`: the file goes into the Media Library, then the
   existing transcription job runs.
 - `GET widgets/player/source`: a short-lived media URL for a VocalStack
-  recording, or the follow credentials for a live broadcast.
+  transcription, or the follow credentials for a live broadcast.
 
 **Connection.** `POST connect` starts one-click Connect and
 `admin-post.php?action=vocalstack_connect` finishes it (`src/Connect.php`):
@@ -56,7 +56,7 @@ icon's link is signed for a limited time).
 ## Widget tickets: why a visitor can't tamper with a widget
 
 A widget's configuration (what it records into, max duration, who may use it,
-which recording it plays) is written by a post author. That configuration is
+which transcription it plays) is written by a post author. That configuration is
 rendered into the page, and the visitor's browser sends it back when it acts.
 So the server signs it:
 
@@ -64,7 +64,7 @@ So the server signs it:
 
 Public routes verify the ticket and act on the signed config only. A visitor
 who edits the HTML gets a signature mismatch. A ticket names one widget's
-config, so it can't be reused to play another recording or raise a limit.
+config, so it can't be reused to play another transcription or raise a limit.
 
 ## Spending policy
 

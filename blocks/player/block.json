@@ -2,11 +2,11 @@
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
 	"name": "vocalstack/player",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"title": "VocalStack Player",
 	"category": "media",
 	"icon": "controls-play",
-	"description": "Play audio or video with its transcript: a Media Library file, a VocalStack recording, or a live broadcast.",
+	"description": "Play audio or video with its transcript: a Media Library file, a VocalStack transcription, or a live broadcast.",
 	"keywords": [
 		"audio",
 		"video",

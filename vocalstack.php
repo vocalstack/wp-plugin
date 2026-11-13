@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       VocalStack
  * Description:       Transcribe the audio and video in your Media Library with VocalStack, and show the transcripts and captions on your site.
- * Version:           0.3.1
+ * Version:           0.4.0
  * Requires at least: 6.6
  * Requires PHP:      8.1
  * Author:            VocalStack
@@ -16,7 +16,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'VOCALSTACK_VERSION', '0.3.1' );
+define( 'VOCALSTACK_VERSION', '0.4.0' );
 define( 'VOCALSTACK_FILE', __FILE__ );
 define( 'VOCALSTACK_DIR', plugin_dir_path( __FILE__ ) );
 define( 'VOCALSTACK_URL', plugin_dir_url( __FILE__ ) );

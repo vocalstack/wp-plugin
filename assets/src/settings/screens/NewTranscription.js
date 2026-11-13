@@ -124,9 +124,9 @@ export default function NewTranscription( { onClose, onCreated } ) {
 					settings: settingsOf( language, speakers ),
 				},
 			} );
-			const grant = await vs( `transcriptions/${ seg( t.id ) }/recordings`, { method: 'POST', idempotent: true, data: {} } );
+			const grant = await vs( `transcriptions/${ seg( t.id ) }/start`, { method: 'POST', idempotent: true, data: {} } );
 			if ( fromBrowser ) {
-				setRecording( { stream, transcriptionId: t.id, recordingId: grant.recording?.id, streamUrl: grant.streamUrl } );
+				setRecording( { stream, transcriptionId: t.id, streamUrl: grant.streamUrl } );
 				setBusy( '' );
 				return;
 			}
@@ -141,7 +141,7 @@ export default function NewTranscription( { onClose, onCreated } ) {
 	if ( recording ) {
 		return (
 			<Modal title={ name || __( 'Live transcription', 'vocalstack' ) } onRequestClose={ () => {} } isDismissible={ false } shouldCloseOnClickOutside={ false } shouldCloseOnEsc={ false } className="vsa-modal" size="medium">
-				<LiveRecorder stream={ recording.stream } recordingId={ recording.recordingId } streamUrl={ recording.streamUrl } onFinished={ () => onCreated( recording.transcriptionId ) } />
+				<LiveRecorder stream={ recording.stream } transcriptionId={ recording.transcriptionId } streamUrl={ recording.streamUrl } onFinished={ () => onCreated( recording.transcriptionId ) } />
 			</Modal>
 		);
 	}

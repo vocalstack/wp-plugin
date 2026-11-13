@@ -153,7 +153,7 @@ final class Widgets {
 				return '';
 			}
 			// Listening languages: a Media Library file needs its VocalStack transcript to be translated.
-			$translatable      = 'media' !== $options['source'] || '' !== Media::recording_id( (int) $options['id'] );
+			$translatable      = 'media' !== $options['source'] || '' !== Media::transcription_id( (int) $options['id'] );
 			$args['languages'] = $translatable ? Languages::offered( $options, false ) : array();
 			$config['api']     = Settings::api_url();
 			$config['voices']  = array_values( array_column( array_filter( $args['languages'], fn( $l ) => ! empty( $l['voice'] ) ), 'code' ) );

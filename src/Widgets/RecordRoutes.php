@@ -20,15 +20,15 @@ defined( 'ABSPATH' ) || exit;
  * VocalStack over a WebSocket; WordPress only opens and closes it:
  *
  * 1. `POST widgets/record/start {ticket, source}` checks the widget's signed
- *    options and the site's limits, creates a live transcription, starts its
- *    recording and returns the socket URL. That URL works for one recording,
+ *    options and the site's limits, creates a live transcription, starts it
+ *    and returns the socket URL. That URL works for that one transcription,
  *    must be opened within two minutes, and grants nothing else.
  * 2. `POST widgets/record/reconnect {session}` after a dropped socket.
  * 3. `POST widgets/record/stop {session}` ends it and settles the minutes.
  * 4. `GET widgets/record/status?session=`: state, and the transcript once it
  *    has one (a stream source has no socket of its own, so it polls this).
  *
- * `session` is a signed handle naming the recording and who started it, so one
+ * `session` is a signed handle naming the transcription and who started it, so one
  * visitor can't stop or reconnect to another's recording.
  */
 final class RecordRoutes {
@@ -149,33 +149,32 @@ final class RecordRoutes {
 		$who = Policy::visitor();
 		try {
 			$created = $vs->transcriptions->createLive( $fields, wp_generate_uuid4() );
-			$grant   = $vs->transcriptions->startRecording( (string) $created['id'] );
+			$grant   = $vs->transcriptions->start( (string) $created['id'] );
 		} catch ( VocalStackException | ConnectionException $e ) {
 			Policy::settle_minutes( $who, $max, 0 );
 			return self::error( $e );
 		}
 
-		$recording = (string) ( $grant['recording']['id'] ?? '' );
+		$transcription = (string) ( $grant['transcription']['id'] ?? $created['id'] );
 		return array(
-			'session'     => Ticket::sign(
+			'session'         => Ticket::sign(
 				array(
 					'kind'     => 'record-session',
-					'rec'      => $recording,
-					'tr'       => (string) $created['id'],
+					'tr'       => $transcription,
 					'who'      => $who,
 					'reserved' => $max,
 					'stream'   => isset( $fields['source'] ),
 					'exp'      => time() + $max + self::HANDLE_GRACE,
 				)
 			),
-			'recordingId' => $recording,
-			'streamUrl'   => $grant['streamUrl'] ?? null,
-			'maxSeconds'  => $max,
+			'transcriptionId' => $transcription,
+			'streamUrl'       => $grant['streamUrl'] ?? null,
+			'maxSeconds'      => $max,
 		);
 	}
 
 	/**
-	 * A new socket URL for the same recording, after the connection dropped.
+	 * A new socket URL for the same transcription, after the connection dropped.
 	 *
 	 * @param \WP_REST_Request $request The request.
 	 * @return array<string, mixed>|\WP_Error
@@ -186,7 +185,7 @@ final class RecordRoutes {
 			return $session;
 		}
 		try {
-			$grant = Plugin::sdk()->recordings->publishToken( $session['rec'], true );
+			$grant = Plugin::sdk()->transcriptions->publishToken( $session['tr'], true );
 		} catch ( VocalStackException | ConnectionException $e ) {
 			return self::error( $e );
 		}
@@ -207,25 +206,25 @@ final class RecordRoutes {
 		}
 		$vs = Plugin::sdk();
 		try {
-			$recording = $vs->recordings->get( $session['rec'] );
-			if ( in_array( $recording['state'] ?? '', array( 'live', 'paused', 'idle' ), true ) ) {
-				// VocalStack refuses to stop a live recording that is not paused first.
-				if ( 'live' === $recording['state'] ) {
-					$vs->recordings->pause( $session['rec'] );
+			$transcription = $vs->transcriptions->get( $session['tr'] );
+			if ( in_array( $transcription['state'] ?? '', array( 'live', 'paused', 'idle' ), true ) ) {
+				// VocalStack refuses to stop a live transcription that is not paused first.
+				if ( 'live' === $transcription['state'] ) {
+					$vs->transcriptions->pause( $session['tr'] );
 				}
-				$recording = $vs->recordings->stop( $session['rec'], 'Stopped from the website' );
+				$transcription = $vs->transcriptions->stop( $session['tr'], 'Stopped from the website' );
 			}
 		} catch ( VocalStackException $e ) {
 			// Already ended (the browser sent eof): nothing left to stop.
 			if ( ! in_array( $e->status(), array( 404, 409 ), true ) ) {
 				return self::error( $e );
 			}
-			$recording = array();
+			$transcription = array();
 		} catch ( ConnectionException $e ) {
 			return self::error( $e );
 		}
-		self::settle( $session, $recording );
-		return array( 'state' => (string) ( $recording['state'] ?? 'ended' ) );
+		self::settle( $session, $transcription );
+		return array( 'state' => (string) ( $transcription['state'] ?? 'ended' ) );
 	}
 
 	/**
@@ -241,18 +240,18 @@ final class RecordRoutes {
 		}
 		$vs = Plugin::sdk();
 		try {
-			$recording  = $vs->recordings->get( $session['rec'] );
-			$transcript = $vs->recordings->transcript( $session['rec'] );
+			$transcription = $vs->transcriptions->get( $session['tr'] );
+			$transcript    = $vs->transcriptions->transcript( $session['tr'] );
 		} catch ( VocalStackException | ConnectionException $e ) {
 			return self::error( $e );
 		}
-		if ( in_array( $recording['state'] ?? '', array( 'ended', 'finalized' ), true ) ) {
-			self::settle( $session, $recording );
+		if ( in_array( $transcription['state'] ?? '', array( 'ended', 'finalized' ), true ) ) {
+			self::settle( $session, $transcription );
 		}
 		return array(
-			'state'     => (string) ( $recording['state'] ?? '' ),
-			'ingest'    => $recording['ingest']['state'] ?? null,
-			'endReason' => $recording['endReason'] ?? null,
+			'state'     => (string) ( $transcription['state'] ?? '' ),
+			'ingest'    => $transcription['ingest']['state'] ?? null,
+			'endReason' => $transcription['endReason'] ?? null,
 			'sentences' => self::sentences( $transcript ),
 		);
 	}
@@ -260,15 +259,15 @@ final class RecordRoutes {
 	/**
 	 * Settle a recording's reservation once, with its real length.
 	 *
-	 * @param array<string, mixed> $session   The verified session.
-	 * @param array<string, mixed> $recording The recording, as VocalStack has it.
+	 * @param array<string, mixed> $session       The verified session.
+	 * @param array<string, mixed> $transcription The transcription, as VocalStack has it.
 	 */
-	private static function settle( array $session, array $recording ): void {
+	private static function settle( array $session, array $transcription ): void {
 		// Never released: it outlives the session, after which nothing can settle it again.
-		if ( ! Lock::acquire( 'settled_' . md5( $session['rec'] ), max( DAY_IN_SECONDS, (int) $session['exp'] - time() ) ) ) {
+		if ( ! Lock::acquire( 'settled_' . md5( $session['tr'] ), max( DAY_IN_SECONDS, (int) $session['exp'] - time() ) ) ) {
 			return;
 		}
-		$actual = (int) ceil( (float) ( $recording['mediaDurationS'] ?? $session['reserved'] ) );
+		$actual = (int) ceil( (float) ( $transcription['durationS'] ?? $session['reserved'] ) );
 		Policy::settle_minutes( (string) $session['who'], (int) $session['reserved'], $actual );
 	}
 

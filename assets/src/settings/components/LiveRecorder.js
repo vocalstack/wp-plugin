@@ -15,13 +15,13 @@ const RETRIES = 7;
 
 /**
  * @param {Object}      props
- * @param {MediaStream} props.stream       The audio to send, already allowed by the user.
- * @param {string}      props.recordingId  The recording to publish into.
- * @param {string}      props.streamUrl    Its socket URL.
- * @param {Function}    props.onFinished   Called when the recording has ended.
- * @param {boolean}     props.pausable     Offer Pause and Resume.
+ * @param {MediaStream} props.stream          The audio to send, already allowed by the user.
+ * @param {string}      props.transcriptionId The live transcription to publish into.
+ * @param {string}      props.streamUrl       Its socket URL.
+ * @param {Function}    props.onFinished      Called when the recording has ended.
+ * @param {boolean}     props.pausable        Offer Pause and Resume.
  */
-export default function LiveRecorder( { stream, recordingId, streamUrl, onFinished, pausable = false } ) {
+export default function LiveRecorder( { stream, transcriptionId, streamUrl, onFinished, pausable = false } ) {
 	const [ state, setState ] = useState( 'warming' );
 	const [ sentences, setSentences ] = useState( [] );
 	const [ draft, setDraft ] = useState( '' );
@@ -48,7 +48,7 @@ export default function LiveRecorder( { stream, recordingId, streamUrl, onFinish
 					return;
 				}
 				try {
-					const grant = await vs( `recordings/${ seg( recordingId ) }/publish-token`, { method: 'POST', data: { takeover: true } } );
+					const grant = await vs( `transcriptions/${ seg( transcriptionId ) }/publish-token`, { method: 'POST', data: { takeover: true } } );
 					if ( grant.streamUrl ) {
 						publisher.current.connect( grant.streamUrl );
 						setState( 'warming' );
@@ -132,7 +132,7 @@ export default function LiveRecorder( { stream, recordingId, streamUrl, onFinish
 		setPausing( true );
 		try {
 			const next = ! pausedRef.current;
-			await vs( `recordings/${ seg( recordingId ) }/${ next ? 'pause' : 'resume' }`, { method: 'POST' } );
+			await vs( `transcriptions/${ seg( transcriptionId ) }/${ next ? 'pause' : 'resume' }`, { method: 'POST' } );
 			pausedRef.current = next;
 			setPaused( next );
 		} catch ( e ) {

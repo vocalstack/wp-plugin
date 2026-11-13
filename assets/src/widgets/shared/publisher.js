@@ -1,8 +1,8 @@
 /**
- * Publishing audio into one VocalStack recording over its socket.
+ * Publishing audio into one live VocalStack transcription over its socket.
  *
  * The socket URL comes from WordPress (a widget's record/start, or the admin's
- * recordings call) and works for that recording only. Protocol:
+ * start call) and works for that transcription only. Protocol:
  * - the server sends `session.loading` frames while an engine warms up, then
  *   `session.ready`; audio sent before that is refused, so chunks are held;
  * - audio goes as binary frames of 16 kHz mono float32 PCM, with a `clock`

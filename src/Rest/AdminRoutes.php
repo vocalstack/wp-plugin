@@ -130,21 +130,21 @@ final class AdminRoutes {
 		if ( ! current_user_can( Proxy::CAPABILITY ) ) {
 			wp_die( esc_html__( 'You are not allowed to export transcripts.', 'vocalstack' ), 403 );
 		}
-		$recording = isset( $_GET['recording'] ) ? sanitize_text_field( wp_unslash( $_GET['recording'] ) ) : '';
-		$format    = isset( $_GET['format'] ) ? sanitize_key( wp_unslash( $_GET['format'] ) ) : '';
-		$name      = isset( $_GET['name'] ) ? sanitize_file_name( wp_unslash( $_GET['name'] ) ) : 'transcript';
-		$types     = array(
+		$transcription = isset( $_GET['transcription'] ) ? sanitize_text_field( wp_unslash( $_GET['transcription'] ) ) : '';
+		$format        = isset( $_GET['format'] ) ? sanitize_key( wp_unslash( $_GET['format'] ) ) : '';
+		$name          = isset( $_GET['name'] ) ? sanitize_file_name( wp_unslash( $_GET['name'] ) ) : 'transcript';
+		$types         = array(
 			'pdf'  => 'application/pdf',
 			'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 			'srt'  => 'application/x-subrip',
 			'json' => 'application/json',
 		);
-		$vs        = Plugin::sdk();
-		if ( ! preg_match( '/^[A-Za-z0-9_-]{1,64}$/', $recording ) || ! isset( $types[ $format ] ) || ! $vs ) {
+		$vs            = Plugin::sdk();
+		if ( ! preg_match( '/^[A-Za-z0-9_-]{1,64}$/', $transcription ) || ! isset( $types[ $format ] ) || ! $vs ) {
 			wp_die( esc_html__( 'This export is not available.', 'vocalstack' ), 400 );
 		}
 		try {
-			$body = $vs->recordings->export( $recording, $format );
+			$body = $vs->transcriptions->export( $transcription, $format );
 		} catch ( VocalStackException | ConnectionException $e ) {
 			wp_die( esc_html( $e->getMessage() ), 502 );
 		}

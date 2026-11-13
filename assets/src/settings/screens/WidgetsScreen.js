@@ -21,7 +21,7 @@ const TRANSCRIPT_SCHEMA = {
 };
 
 const TYPES = [
-	{ value: 'player', label: __( 'Audio player', 'vocalstack' ), help: __( 'Plays a Media Library file, a VocalStack recording or a live broadcast, with its transcript.', 'vocalstack' ) },
+	{ value: 'player', label: __( 'Audio player', 'vocalstack' ), help: __( 'Plays a Media Library file, a VocalStack transcription or a live broadcast, with its transcript.', 'vocalstack' ) },
 	{ value: 'record', label: __( 'Record button', 'vocalstack' ), help: __( 'Visitors record from their microphone or a browser tab, or start your stream, and see the transcript appear live. Billed to your VocalStack account.', 'vocalstack' ) },
 	{ value: 'upload', label: __( 'Upload button', 'vocalstack' ), help: __( 'Visitors upload audio or video; it is saved in your Media Library and transcribed. Billed to your VocalStack account.', 'vocalstack' ) },
 	{ value: 'transcript', label: __( 'Transcript', 'vocalstack' ), help: __( 'The transcript of a Media Library file, with click-to-seek.', 'vocalstack' ) },
@@ -29,7 +29,7 @@ const TYPES = [
 
 const LABELS = {
 	source: __( 'Plays', 'vocalstack' ),
-	id: __( 'File, recording or broadcast', 'vocalstack' ),
+	id: __( 'File, transcription or broadcast', 'vocalstack' ),
 	transcript: __( 'Show the transcript', 'vocalstack' ),
 	timestamps: __( 'Show timestamps', 'vocalstack' ),
 	speakers: __( 'Speakers', 'vocalstack' ),
@@ -49,7 +49,7 @@ const LABELS = {
 const ENUM_LABELS = {
 	'': __( 'Site default', 'vocalstack' ),
 	media: __( 'A Media Library file', 'vocalstack' ),
-	recording: __( 'A VocalStack transcription', 'vocalstack' ),
+	transcription: __( 'A VocalStack transcription', 'vocalstack' ),
 	broadcast: __( 'A live broadcast (public)', 'vocalstack' ),
 	everyone: __( 'Everyone', 'vocalstack' ),
 	logged_in: __( 'Logged-in users', 'vocalstack' ),
@@ -137,7 +137,7 @@ function VocalStackPicker( { kind, value, onChange } ) {
 						} ) )
 				  )
 				: vs( 'transcriptions', { query: { limit: 100 } } ).then( ( r ) =>
-						( r.transcriptions ?? [] ).filter( ( t ) => ! t.live || t.lastRecording ).map( ( t ) => ( { value: t.id, label: ( t.live && t.lastRecording?.title ) || t.name } ) )
+						( r.transcriptions ?? [] ).filter( ( t ) => ! t.live || ( t.state && t.state !== 'idle' ) ).map( ( t ) => ( { value: t.id, label: ( t.live && t.title ) || t.name } ) )
 				  );
 		load.then( setOptions, () => setOptions( [] ) );
 	}, [ kind ] );
@@ -148,7 +148,7 @@ function VocalStackPicker( { kind, value, onChange } ) {
 			value={ value }
 			options={ [ { value: '', label: __( 'Choose…', 'vocalstack' ) }, ...options ] }
 			onChange={ onChange }
-			help={ kind === 'recording' ? __( 'The 100 most recent transcriptions on your account.', 'vocalstack' ) : undefined }
+			help={ kind === 'transcription' ? __( 'The 100 most recent transcriptions on your account.', 'vocalstack' ) : undefined }
 			__nextHasNoMarginBottom
 		/>
 	);

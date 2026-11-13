@@ -9,10 +9,10 @@ import { arrowLeft } from '@wordpress/icons';
 import { languageOptions, SPEAKER_OPTIONS, useLanguages, useLinks } from '../lib/account';
 import { errorMessage, seg, vs } from '../lib/api';
 import { adminPostUrl, exportNonce } from '../lib/config';
-import { bytes, clock, whenLong } from '../lib/format';
+import { bytes, clock } from '../lib/format';
 import { navigate } from '../lib/router';
 import { isRecording, jobLength, RUNNING, sourceLineOf, statusOf, txRow } from '../lib/tx';
-import { RecordingView } from '../components/Player';
+import { TranscriptView } from '../components/Player';
 import ShareLinks from '../components/ShareLinks';
 import { ApiBadge, Chip, ErrorNotice, LangLabel, PageHeader, PurgeModal, RowIcon } from '../components/ui';
 
@@ -71,11 +71,11 @@ function Title( { value, onSave } ) {
 	);
 }
 
-function Summary( { recordingId } ) {
+function Summary( { transcriptionId } ) {
 	const [ summary, setSummary ] = useState( null );
 	const [ busy, setBusy ] = useState( false );
 	const [ error, setError ] = useState( '' );
-	const load = useCallback( () => vs( `recordings/${ seg( recordingId ) }/summary` ).then( setSummary, ( e ) => setError( errorMessage( e ) ) ), [ recordingId ] );
+	const load = useCallback( () => vs( `transcriptions/${ seg( transcriptionId ) }/summary` ).then( setSummary, ( e ) => setError( errorMessage( e ) ) ), [ transcriptionId ] );
 	useEffect( () => {
 		load();
 	}, [ load ] );
@@ -88,7 +88,7 @@ function Summary( { recordingId } ) {
 		setBusy( true );
 		setError( '' );
 		try {
-			await vs( `recordings/${ seg( recordingId ) }/summarize`, { method: 'POST', idempotent: true } );
+			await vs( `transcriptions/${ seg( transcriptionId ) }/summarize`, { method: 'POST', idempotent: true } );
 			await load();
 		} catch ( e ) {
 			setError( errorMessage( e ) );
@@ -127,9 +127,9 @@ function Summary( { recordingId } ) {
 	);
 }
 
-function Exports( { recordingId, name } ) {
+function Exports( { transcriptionId, name } ) {
 	const link = ( format ) =>
-		`${ adminPostUrl }?${ new URLSearchParams( { action: 'vocalstack_export', recording: recordingId, format, name: name || 'transcript', _wpnonce: exportNonce } ) }`;
+		`${ adminPostUrl }?${ new URLSearchParams( { action: 'vocalstack_export', transcription: transcriptionId, format, name: name || 'transcript', _wpnonce: exportNonce } ) }`;
 	const formats = [
 		[ 'pdf', __( 'PDF document', 'vocalstack' ) ],
 		[ 'xlsx', __( 'Excel spreadsheet', 'vocalstack' ) ],
@@ -177,7 +177,7 @@ function SettingsForm( { transcription, onSaved } ) {
 		<div className="vsa-form vsa-narrow">
 			<p className="vsa-muted">
 				{ transcription.live
-					? __( 'These apply to the next recordings of this live transcription.', 'vocalstack' )
+					? __( 'These apply to this live transcription from now on.', 'vocalstack' )
 					: __( 'These apply if the file is transcribed again. The current transcript keeps the settings it was made with.', 'vocalstack' ) }
 			</p>
 			<SelectControl label={ __( 'Spoken language', 'vocalstack' ) } value={ language } options={ languageOptions( languages ) } onChange={ setLanguage } __nextHasNoMarginBottom />
@@ -193,19 +193,19 @@ function SettingsForm( { transcription, onSaved } ) {
 	);
 }
 
-/** Pause / resume / stop for a live recording VocalStack is pulling. */
-export function LiveControls( { recording, onChange } ) {
+/** Pause / resume / stop for a live transcription VocalStack is pulling. */
+export function LiveControls( { transcriptionId, state, onChange } ) {
 	const [ busy, setBusy ] = useState( '' );
 	const [ error, setError ] = useState( '' );
 	const act = async ( action ) => {
 		setBusy( action );
 		setError( '' );
 		try {
-			if ( action === 'stop' && recording.state === 'live' ) {
-				// VocalStack stops a live recording only once it is paused.
-				await vs( `recordings/${ seg( recording.recordingId ) }/pause`, { method: 'POST' } );
+			if ( action === 'stop' && state === 'live' ) {
+				// VocalStack stops a live transcription only once it is paused.
+				await vs( `transcriptions/${ seg( transcriptionId ) }/pause`, { method: 'POST' } );
 			}
-			await vs( `recordings/${ seg( recording.recordingId ) }/${ action }`, { method: 'POST', data: action === 'stop' ? { reason: 'Stopped from WordPress' } : undefined } );
+			await vs( `transcriptions/${ seg( transcriptionId ) }/${ action }`, { method: 'POST', data: action === 'stop' ? { reason: 'Stopped from WordPress' } : undefined } );
 			onChange();
 		} catch ( e ) {
 			setError( errorMessage( e ) );
@@ -215,8 +215,8 @@ export function LiveControls( { recording, onChange } ) {
 	};
 	return (
 		<div className="vsa-live-controls">
-			<Chip tone={ recording.state === 'live' ? 'live' : 'warning' }>{ recording.state === 'live' ? __( 'LIVE', 'vocalstack' ) : __( 'PAUSED', 'vocalstack' ) }</Chip>
-			{ recording.state === 'live' ? (
+			<Chip tone={ state === 'live' ? 'live' : 'warning' }>{ state === 'live' ? __( 'LIVE', 'vocalstack' ) : __( 'PAUSED', 'vocalstack' ) }</Chip>
+			{ state === 'live' ? (
 				<Button variant="secondary" size="compact" onClick={ () => act( 'pause' ) } isBusy={ busy === 'pause' } disabled={ Boolean( busy ) }>
 					{ __( 'Pause', 'vocalstack' ) }
 				</Button>
@@ -233,37 +233,12 @@ export function LiveControls( { recording, onChange } ) {
 	);
 }
 
-/** A live transcription's recordings, newest first; picking one shows it. */
-function RecordingsPicker( { transcriptionId, value, onChange } ) {
-	const [ recordings, setRecordings ] = useState( null );
-	useEffect( () => {
-		vs( `transcriptions/${ seg( transcriptionId ) }/recordings`, { query: { limit: 50 } } ).then(
-			( r ) => setRecordings( r.recordings ?? [] ),
-			() => setRecordings( [] )
-		);
-	}, [ transcriptionId ] );
-	if ( ! recordings?.length || recordings.length < 2 ) return null;
-	return (
-		<SelectControl
-			label={ __( 'Recording', 'vocalstack' ) }
-			value={ value ?? '' }
-			options={ recordings.map( ( r ) => ( {
-				value: r.id,
-				label: `${ r.title || whenLong( r.startedAt ) }${ r.mediaDurationS ? ` · ${ clock( r.mediaDurationS ) }` : '' }`,
-			} ) ) }
-			onChange={ onChange }
-			__nextHasNoMarginBottom
-		/>
-	);
-}
-
 export default function TranscriptionDetail( { id } ) {
 	const languages = useLanguages();
 	const links = useLinks();
 	const [ t, setT ] = useState( null );
 	const [ error, setError ] = useState( '' );
 	const [ notice, setNotice ] = useState( '' );
-	const [ recordingId, setRecordingId ] = useState( null );
 	const [ lang, setLang ] = useState( '' );
 	const [ busy, setBusy ] = useState( '' );
 	const [ purging, setPurging ] = useState( false );
@@ -272,7 +247,6 @@ export default function TranscriptionDetail( { id } ) {
 		try {
 			const fresh = await vs( `transcriptions/${ seg( id ) }` );
 			setT( fresh );
-			setRecordingId( ( current ) => current ?? fresh.job?.recordingId ?? fresh.currentRecording?.recordingId ?? fresh.lastRecording?.recordingId ?? null );
 		} catch ( e ) {
 			// The site's key reads one workspace: after Settings → Change, an older transcription is not found.
 			setError(
@@ -285,7 +259,6 @@ export default function TranscriptionDetail( { id } ) {
 
 	useEffect( () => {
 		setT( null );
-		setRecordingId( null );
 		load();
 	}, [ load ] );
 
@@ -313,7 +286,7 @@ export default function TranscriptionDetail( { id } ) {
 		setBusy( 'retry' );
 		setNotice( '' );
 		try {
-			await vs( `recordings/${ seg( t.job.recordingId ) }/job/retry`, { method: 'POST' } );
+			await vs( `transcriptions/${ seg( t.id ) }/job/retry`, { method: 'POST' } );
 			await load();
 		} catch ( e ) {
 			setNotice( errorMessage( e ) );
@@ -338,10 +311,12 @@ export default function TranscriptionDetail( { id } ) {
 	const status = statusOf( t );
 	const source = t.job?.source;
 	const meta = [ sourceLineOf( t ), source?.format, source?.bytes ? bytes( source.bytes ) : null ].filter( Boolean ).join( ' · ' );
-	const length = t.live ? ( t.lastRecording?.durationS ? clock( t.lastRecording.durationS ) : null ) : jobLength( t.job ) ? clock( jobLength( t.job ) ) : null;
+	const length = t.live ? ( t.durationS ? clock( t.durationS ) : null ) : jobLength( t.job ) ? clock( jobLength( t.job ) ) : null;
 	const archived = t.lifecycle === 'archived';
 	const failed = t.job?.state === 'failed';
-	const live = t.currentRecording && [ 'live', 'paused' ].includes( t.currentRecording.state ) ? t.currentRecording : null;
+	const live = t.live && [ 'live', 'paused' ].includes( t.state ) ? t : null;
+	// A live transcription has nothing to show before it starts.
+	const recorded = ! t.live || ( Boolean( t.state ) && t.state !== 'idle' );
 	const translatable = [ { value: '', label: __( 'Original', 'vocalstack' ) }, ...languageOptions( languages.filter( ( l ) => l.translation ), { auto: false } ) ];
 	const link = links[ t.id ];
 
@@ -399,7 +374,7 @@ export default function TranscriptionDetail( { id } ) {
 							onClick={ () => act( 'archive', () => navigate( '/transcriptions' ) ) }
 							isBusy={ busy === 'archive' }
 							disabled={ Boolean( busy ) || Boolean( live ) }
-							title={ live ? __( 'Stop the live recording before archiving.', 'vocalstack' ) : undefined }
+							title={ live ? __( 'Stop the live transcription before archiving.', 'vocalstack' ) : undefined }
 						>
 							{ __( 'Archive', 'vocalstack' ) }
 						</Button>
@@ -427,32 +402,31 @@ export default function TranscriptionDetail( { id } ) {
 				</div>
 			) }
 
-			{ live && <LiveControls recording={ live } onChange={ load } /> }
+			{ live && <LiveControls transcriptionId={ t.id } state={ t.state } onChange={ load } /> }
 
 			<TabPanel className="vsa-tabs" tabs={ tabs }>
 				{ ( tab ) => (
 					<div className="vsa-tab">
 						{ tab.name === 'transcript' &&
-							( recordingId ? (
+							( recorded ? (
 								<>
 									<div className="vsa-toolbar">
-										{ t.live && <RecordingsPicker transcriptionId={ t.id } value={ recordingId } onChange={ setRecordingId } /> }
 										<SelectControl label={ __( 'Language', 'vocalstack' ) } value={ lang } options={ translatable } onChange={ setLang } __nextHasNoMarginBottom />
 									</div>
-									<RecordingView recordingId={ recordingId } transcriptionId={ t.id } lang={ lang || undefined } playable={ ! failed && ( t.job?.hasAudio ?? true ) } />
+									<TranscriptView transcriptionId={ t.id } lang={ lang || undefined } playable={ ! failed && ( t.job?.hasAudio ?? true ) } />
 								</>
 							) : (
 								<p className="vsa-muted">{ __( 'Nothing recorded yet.', 'vocalstack' ) }</p>
 							) ) }
-						{ tab.name === 'summary' && ( recordingId ? <Summary recordingId={ recordingId } /> : <p className="vsa-muted">{ __( 'Nothing recorded yet.', 'vocalstack' ) }</p> ) }
+						{ tab.name === 'summary' && ( recorded ? <Summary transcriptionId={ t.id } /> : <p className="vsa-muted">{ __( 'Nothing recorded yet.', 'vocalstack' ) }</p> ) }
 						{ tab.name === 'share' && <ShareLinks parent="transcriptions" id={ t.id } /> }
 						{ tab.name === 'export' &&
-							( recordingId ? (
+							( recorded ? (
 								<>
 									<p className="vsa-muted">
 										{ RUNNING.includes( t.job?.state ) ? __( 'The transcription is still running: an export now holds what is done so far.', 'vocalstack' ) : __( 'Download the transcript.', 'vocalstack' ) }
 									</p>
-									<Exports recordingId={ recordingId } name={ t.name } />
+									<Exports transcriptionId={ t.id } name={ t.name } />
 								</>
 							) : (
 								<p className="vsa-muted">{ __( 'Nothing recorded yet.', 'vocalstack' ) }</p>

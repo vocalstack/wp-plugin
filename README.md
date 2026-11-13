@@ -11,7 +11,7 @@ Built on the PHP SDK [`vocalstack/sdk`](https://github.com/vocalstack/php-sdk). 
 | Tab | |
 |---|---|
 | **Transcriptions** | Every transcription on the account, like app.vocalstack.com/transcriptions: search, active/archived, "From this site", select and archive, restore, delete permanently. **New transcription** from an upload (into the Media Library), a link, or live (microphone, a tab's sound, or a stream URL). The detail screen has the player, timed transcript, speaker names, translation, summary, share links, export (PDF, XLSX, SRT, JSON), settings, retry and rename. |
-| **Broadcasts** | Like app.vocalstack.com/broadcasts: list, create, settings (code, access, language), audio sources (add, check, record from), recordings, share links, archive. |
+| **Broadcasts** | Like app.vocalstack.com/broadcasts: list, create, settings (code, access, language), audio sources (add, check, record from), its transcriptions, share links, archive. |
 | **Media Library** | Every audio and video file with its transcript state, language, speakers and a play button. |
 | **Widgets** | A shortcode generator with preview, and how to restyle widgets. |
 | **Settings** | Account (the connected workspace, one-click Connect, minutes remaining), Transcription defaults, Display (captions), Widgets (who may record or upload, and how much). |
@@ -37,7 +37,7 @@ Each widget is a block and a shortcode, with the same options.
 
 ```
 [vocalstack_player source="media" id="123"]                  a Media Library file
-[vocalstack_player source="recording" id="<transcription or recording id>"]
+[vocalstack_player source="transcription" id="<transcription id>"]   a VocalStack transcription
 [vocalstack_player source="broadcast" id="<broadcast id>"]   follow a public broadcast live
 [vocalstack_record sources="mic,tab" max_record_minutes="10" language="en"]
 [vocalstack_record sources="stream:https://radio.example/live.mp3"]
@@ -47,8 +47,8 @@ Each widget is a block and a shortcode, with the same options.
 
 Common options: `title`, `transcript`, `timestamps`, `speakers`, `style="card|minimal"`; record and upload also take `access="logged_in|roles|nobody"` with `roles="editor,author"`, and `label`.
 
-- **Player.** A Media Library file plays from the site. A VocalStack recording plays from VocalStack with a media token that reads only that recording. A broadcast is followed over VocalStack's sockets: the transcript as it is spoken, the live audio on **Listen live** (WebCodecs browsers), and the last recording between broadcasts. **Only public broadcasts**: the public API can't issue listener tokens for private ones.
-- **Record.** **Signed-in users only.** WordPress opens the recording and the browser streams to VocalStack with a socket URL good for that one recording; the transcript appears as people speak. Tab audio works in Chrome and Edge on a computer. A stream source is fetched by VocalStack.
+- **Player.** A Media Library file plays from the site. A VocalStack transcription plays from VocalStack with a media token that reads only that transcription; `source="recording"` from before 0.4.0 is read as `transcription` (a saved recording id then says it is no longer available). A broadcast is followed over VocalStack's sockets: the transcript as it is spoken, the live audio on **Listen live** (WebCodecs browsers), and the last transcription between broadcasts. **Only public broadcasts**: the public API can't issue listener tokens for private ones.
+- **Record.** **Signed-in users only.** WordPress opens the recording and the browser streams to VocalStack with a socket URL good for that one transcription; the transcript appears as people speak. Tab audio works in Chrome and Edge on a computer. A stream source is fetched by VocalStack.
 - **Upload.** The file goes into the Media Library and is transcribed; the visitor sees the transcript when it is ready.
 
 ### Spending limits

@@ -10,7 +10,7 @@
  *
  * @var array<string, mixed> $args {
  *     @type string     $attributes The root's attributes, escaped.
- *     @type array      $options    The widget's options (`source`: media, recording or broadcast).
+ *     @type array      $options    The widget's options (`source`: media, transcription or broadcast).
  *     @type string     $title      A heading, or ''.
  *     @type array|null $media      For a Media Library file: `url`, `tag` (audio or video), `mime`.
  *     @type array|null $transcript For a Media Library file: see transcript.php.

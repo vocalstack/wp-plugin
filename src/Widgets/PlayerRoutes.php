@@ -19,12 +19,12 @@ use VocalStack\WP\Settings;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * - `GET widgets/player/source?ticket=` for a VocalStack recording: a playable
- *   audio URL (carrying a media token that reads only that recording's audio)
+ * - `GET widgets/player/source?ticket=` for a VocalStack transcription: a playable
+ *   audio URL (carrying a media token that reads only that transcription's audio)
  *   and its transcript; for a broadcast: what the browser needs to follow it
  *   live over VocalStack's sockets (ids, never a credential).
- * - `GET widgets/player/transcript?ticket=&recording=&after=` for a broadcast's
- *   recording: the transcript so far, asked for without the site's key, so
+ * - `GET widgets/player/transcript?ticket=&transcription=&after=` for a broadcast's
+ *   transcription: the transcript so far, asked for without the site's key, so
  *   VocalStack applies its public-listener rules. Browsers can't call that
  *   endpoint across origins themselves.
  *
@@ -67,16 +67,16 @@ final class PlayerRoutes {
 				'callback'            => array( self::class, 'translation' ),
 				'permission_callback' => '__return_true', // The callback checks the signed ticket and the offered languages.
 				'args'                => array(
-					'ticket'    => array(
+					'ticket'        => array(
 						'type'     => 'string',
 						'required' => true,
 					),
-					'lang'      => array(
+					'lang'          => array(
 						'type'     => 'string',
 						'required' => true,
 						'pattern'  => '^[a-z]{2,3}(-[A-Za-z]{2,4})?$',
 					),
-					'recording' => array(
+					'transcription' => array(
 						'type'    => 'string',
 						'default' => '',
 						'pattern' => '^[A-Za-z0-9_-]{0,64}$',
@@ -92,21 +92,21 @@ final class PlayerRoutes {
 				'callback'            => array( self::class, 'transcript' ),
 				'permission_callback' => '__return_true',
 				'args'                => array(
-					'ticket'    => array(
+					'ticket'        => array(
 						'type'     => 'string',
 						'required' => true,
 					),
-					'recording' => array(
+					'transcription' => array(
 						'type'     => 'string',
 						'required' => true,
 						'pattern'  => '^[A-Za-z0-9_-]{1,64}$',
 					),
-					'after'     => array(
+					'after'         => array(
 						'type'    => 'integer',
 						'default' => 0,
 						'minimum' => 0,
 					),
-					'lang'      => array(
+					'lang'          => array(
 						'type'    => 'string',
 						'default' => '',
 						'pattern' => '^([a-z]{2,3}(-[A-Za-z]{2,4})?)?$',
@@ -139,11 +139,11 @@ final class PlayerRoutes {
 			} elseif ( 'media' === $source ) {
 				$data = self::media( $vs, (int) $id );
 			} else {
-				$data = self::recording( $vs, $id );
+				$data = self::transcription( $vs, $id );
 			}
 		} catch ( VocalStackException $e ) {
 			$missing = in_array( $e->status(), array( 403, 404 ), true );
-			return new \WP_Error( 'vocalstack_' . $e->errorCode(), $missing ? __( 'This recording is no longer available.', 'vocalstack' ) : __( 'The player could not load. Try again later.', 'vocalstack' ), array( 'status' => $missing ? 404 : 502 ) );
+			return new \WP_Error( 'vocalstack_' . $e->errorCode(), $missing ? __( 'This transcription is no longer available.', 'vocalstack' ) : __( 'The player could not load. Try again later.', 'vocalstack' ), array( 'status' => $missing ? 404 : 502 ) );
 		} catch ( ConnectionException $e ) {
 			return new \WP_Error( 'vocalstack_unreachable', __( 'The player could not load. Try again later.', 'vocalstack' ), array( 'status' => 502 ) );
 		}
@@ -158,38 +158,41 @@ final class PlayerRoutes {
 	}
 
 	/**
-	 * A finished recording: its audio URL and transcript. Cached a few minutes.
+	 * A finished transcription: its audio URL and transcript. Cached a few minutes.
+	 *
+	 * A player saved before 0.4.0 may name a recording id: VocalStack no longer
+	 * answers to those, so it reads as not found.
 	 *
 	 * @param VocalStack $vs The client.
-	 * @param string     $id Recording or transcription id.
+	 * @param string     $id Transcription id.
 	 * @return array<string, mixed>
 	 */
-	private static function recording( VocalStack $vs, string $id ): array {
+	private static function transcription( VocalStack $vs, string $id ): array {
 		$cache = 'vocalstack_player_' . md5( $id );
 		$hit   = get_transient( $cache );
 		if ( is_array( $hit ) ) {
 			return $hit;
 		}
-		$recording_id = self::recording_id( $vs, $id );
-		$recording    = $vs->recordings->get( $recording_id );
-		$token        = $vs->recordings->mediaToken( $recording_id );
-		$transcript   = $vs->recordings->transcript( $recording_id );
-		$data         = array(
-			'kind'        => 'recording',
-			'recordingId' => $recording_id,
-			'title'       => (string) ( $recording['title'] ?? '' ),
-			'duration'    => (float) ( $recording['mediaDurationS'] ?? 0 ),
-			'audioUrl'    => add_query_arg(
+		$transcription = $vs->transcriptions->get( $id );
+		$id            = (string) ( $transcription['id'] ?? $id );
+		$token         = $vs->transcriptions->mediaToken( $id );
+		$transcript    = $vs->transcriptions->transcript( $id );
+		$data          = array(
+			'kind'            => 'transcription',
+			'transcriptionId' => $id,
+			'title'           => (string) ( $transcription['title'] ?? $transcription['name'] ?? '' ),
+			'duration'        => (float) ( $transcription['durationS'] ?? 0 ),
+			'audioUrl'        => add_query_arg(
 				array(
 					'kind'   => 'delivery',
 					'format' => 'mp3',
 					'media'  => rawurlencode( (string) $token['token'] ),
 				),
-				Settings::api_url() . '/v1/recordings/' . rawurlencode( $recording_id ) . '/audio'
+				Settings::api_url() . '/v1/transcriptions/' . rawurlencode( $id ) . '/audio'
 			),
-			'mediaToken'  => (string) $token['token'],
-			'sentences'   => RecordRoutes::sentences( $transcript ),
-			'labelled'    => 'off' !== ( $transcript['speakerLabels'] ?? 'off' ),
+			'mediaToken'      => (string) $token['token'],
+			'sentences'       => RecordRoutes::sentences( $transcript ),
+			'labelled'        => 'off' !== ( $transcript['speakerLabels'] ?? 'off' ),
 		);
 		// The media token lasts at least until the end of the next UTC day; refresh well before.
 		set_transient( $cache, $data, 10 * MINUTE_IN_SECONDS );
@@ -197,48 +200,29 @@ final class PlayerRoutes {
 	}
 
 	/**
-	 * A Media Library file: the VocalStack recording behind its transcript, for
-	 * listening in other languages. Its audio and transcript are in the page.
+	 * A Media Library file: the VocalStack transcription behind its transcript,
+	 * for listening in other languages. Its audio and transcript are in the page.
 	 *
 	 * @param VocalStack $vs The client.
 	 * @param int        $id Attachment ID.
 	 * @return array<string, mixed>|\WP_Error
 	 */
 	private static function media( VocalStack $vs, int $id ) {
-		$recording_id = Media::recording_id( $id );
-		if ( '' === $recording_id || 'done' !== get_post_meta( $id, Media::STATE, true ) ) {
+		$transcription_id = Media::transcription_id( $id );
+		if ( '' === $transcription_id || 'done' !== get_post_meta( $id, Media::STATE, true ) ) {
 			return new \WP_Error( 'vocalstack_not_transcribed', __( 'This file has no VocalStack transcript to translate.', 'vocalstack' ), array( 'status' => 404 ) );
 		}
-		$cache = 'vocalstack_media_token_' . md5( $recording_id );
+		$cache = 'vocalstack_media_token_' . md5( $transcription_id );
 		$token = get_transient( $cache );
 		if ( ! is_string( $token ) || '' === $token ) {
-			$token = (string) ( $vs->recordings->mediaToken( $recording_id )['token'] ?? '' );
+			$token = (string) ( $vs->transcriptions->mediaToken( $transcription_id )['token'] ?? '' );
 			set_transient( $cache, $token, HOUR_IN_SECONDS );
 		}
 		return array(
-			'kind'        => 'media',
-			'recordingId' => $recording_id,
-			'mediaToken'  => $token,
+			'kind'            => 'media',
+			'transcriptionId' => $transcription_id,
+			'mediaToken'      => $token,
 		);
-	}
-
-	/**
-	 * A transcription id resolves to its (last) recording; a recording id is itself.
-	 *
-	 * @param VocalStack $vs The client.
-	 * @param string     $id Either.
-	 * @throws VocalStackException When VocalStack refuses for another reason than not finding it.
-	 */
-	private static function recording_id( VocalStack $vs, string $id ): string {
-		try {
-			$transcription = $vs->transcriptions->get( $id );
-		} catch ( VocalStackException $e ) {
-			if ( 404 === $e->status() ) {
-				return $id;
-			}
-			throw $e;
-		}
-		return (string) ( $transcription['job']['recordingId'] ?? $transcription['lastRecording']['recordingId'] ?? $id );
 	}
 
 	/**
@@ -258,8 +242,8 @@ final class PlayerRoutes {
 		if ( 'public' !== ( $hit['access'] ?? 'public' ) ) {
 			return new \WP_Error( 'vocalstack_private_broadcast', __( 'This broadcast is private and can’t be followed here.', 'vocalstack' ), array( 'status' => 403 ) );
 		}
-		$current = $hit['currentRecording'] ?? null;
-		$last    = $hit['lastRecording'] ?? null;
+		$current = $hit['currentTranscription'] ?? null;
+		$last    = $hit['lastTranscription'] ?? null;
 		return array(
 			'kind'        => 'broadcast',
 			'broadcastId' => (string) $hit['id'],
@@ -267,20 +251,20 @@ final class PlayerRoutes {
 			'shareUrl'    => (string) ( $hit['shareUrl'] ?? '' ),
 			'socketBase'  => self::socket_base(),
 			'live'        => is_array( $current ) ? array(
-				'recordingId' => (string) ( $current['recordingId'] ?? '' ),
-				'state'       => (string) ( $current['state'] ?? '' ),
+				'transcriptionId' => (string) ( $current['transcriptionId'] ?? '' ),
+				'state'           => (string) ( $current['state'] ?? '' ),
 			) : null,
 			'last'        => is_array( $last ) ? array(
-				'recordingId' => (string) ( $last['recordingId'] ?? '' ),
-				'title'       => (string) ( $last['title'] ?? '' ),
-				'startedAt'   => (string) ( $last['startedAt'] ?? '' ),
-				'audioUrl'    => Settings::api_url() . '/v1/recordings/' . rawurlencode( (string) ( $last['recordingId'] ?? '' ) ) . '/audio?kind=delivery&format=mp3',
+				'transcriptionId' => (string) ( $last['transcriptionId'] ?? '' ),
+				'title'           => (string) ( $last['title'] ?? '' ),
+				'startedAt'       => (string) ( $last['startedAt'] ?? '' ),
+				'audioUrl'        => Settings::api_url() . '/v1/transcriptions/' . rawurlencode( (string) ( $last['transcriptionId'] ?? '' ) ) . '/audio?kind=delivery&format=mp3',
 			) : null,
 		);
 	}
 
 	/**
-	 * The transcript of one of a public broadcast's recordings, as a listener sees it.
+	 * The transcript of one of a public broadcast's transcriptions, as a listener sees it.
 	 *
 	 * @param \WP_REST_Request $request The request.
 	 * @return \WP_REST_Response|\WP_Error
@@ -290,19 +274,19 @@ final class PlayerRoutes {
 		if ( ! $widget || 'player' !== ( $widget['type'] ?? '' ) || 'broadcast' !== ( $widget['source'] ?? '' ) ) {
 			return new \WP_Error( 'vocalstack_bad_ticket', __( 'This player is out of date. Reload the page.', 'vocalstack' ), array( 'status' => 400 ) );
 		}
-		$recording = (string) $request['recording'];
-		$after     = (int) $request['after'];
-		$lang      = (string) $request['lang'];
+		$transcription = (string) $request['transcription'];
+		$after         = (int) $request['after'];
+		$lang          = (string) $request['lang'];
 		if ( '' !== $lang && ! Languages::is_offered( $widget, $lang ) ) {
 			return new \WP_Error( 'vocalstack_language_not_offered', __( 'This language isn’t offered here.', 'vocalstack' ), array( 'status' => 403 ) );
 		}
-		$cache = 'vocalstack_listen_' . md5( $recording . '|' . $after . '|' . $lang );
+		$cache = 'vocalstack_listen_' . md5( $transcription . '|' . $after . '|' . $lang );
 		$data  = get_transient( $cache );
 		if ( ! is_array( $data ) ) {
 			try {
 				// No key: VocalStack answers only what any listener of a public broadcast may read.
 				$listener   = new VocalStack( apiKey: null, baseUrl: Settings::api_url(), maxRetries: 0, httpClient: Plugin::http_client() );
-				$transcript = $listener->recordings->transcript( $recording, $after > 0 ? $after : null, '' !== $lang ? $lang : null );
+				$transcript = $listener->transcriptions->transcript( $transcription, $after > 0 ? $after : null, '' !== $lang ? $lang : null );
 			} catch ( VocalStackException $e ) {
 				return new \WP_Error( 'vocalstack_' . $e->errorCode(), __( 'This transcript is not public.', 'vocalstack' ), array( 'status' => 404 ) );
 			} catch ( ConnectionException $e ) {
@@ -336,12 +320,12 @@ final class PlayerRoutes {
 	}
 
 	/**
-	 * A recording's transcript in another language, and what the browser needs
+	 * A transcription's transcript in another language, and what the browser needs
 	 * to hear it spoken a sentence at a time (as VocalStack's own reader does:
-	 * `GET /v1/recordings/{id}/voice/{sentence}?lang=` speaks a line on demand).
+	 * `GET /v1/transcriptions/{id}/voice/{sentence}?lang=` speaks a line on demand).
 	 *
 	 * Only languages the widget offers: each translation is billed to the site's
-	 * account. A broadcast's recording is asked for without the key, so
+	 * account. A broadcast's transcription is asked for without the key, so
 	 * VocalStack applies its public-listener rules. Answers are kept for a few
 	 * hours, so repeat listeners don't translate the same lines again.
 	 *
@@ -364,19 +348,19 @@ final class PlayerRoutes {
 		}
 		try {
 			if ( 'broadcast' === $source ) {
-				$recording_id = (string) $request['recording'];
-				$client       = new VocalStack( apiKey: null, baseUrl: Settings::api_url(), maxRetries: 0, httpClient: Plugin::http_client() );
+				$transcription_id = (string) $request['transcription'];
+				$client           = new VocalStack( apiKey: null, baseUrl: Settings::api_url(), maxRetries: 0, httpClient: Plugin::http_client() );
 			} else {
-				$recording_id = 'media' === $source ? Media::recording_id( (int) $widget['id'] ) : self::recording_id( $vs, (string) $widget['id'] );
-				$client       = $vs;
+				$transcription_id = 'media' === $source ? Media::transcription_id( (int) $widget['id'] ) : (string) $widget['id'];
+				$client           = $vs;
 			}
-			if ( '' === $recording_id ) {
+			if ( '' === $transcription_id ) {
 				return new \WP_Error( 'vocalstack_not_transcribed', __( 'This file has no VocalStack transcript to translate.', 'vocalstack' ), array( 'status' => 404 ) );
 			}
-			$cache = 'vocalstack_tr_' . md5( $recording_id . '|' . $lang . '|' . ( 'broadcast' === $source ? 'listener' : 'owner' ) );
+			$cache = 'vocalstack_tr_' . md5( $transcription_id . '|' . $lang . '|' . ( 'broadcast' === $source ? 'listener' : 'owner' ) );
 			$data  = get_transient( $cache );
 			if ( ! is_array( $data ) ) {
-				$data = self::translate( $client, $recording_id, $lang );
+				$data = self::translate( $client, $transcription_id, $lang );
 				set_transient( $cache, $data, 6 * HOUR_IN_SECONDS );
 			}
 		} catch ( VocalStackException $e ) {
@@ -388,16 +372,16 @@ final class PlayerRoutes {
 	}
 
 	/**
-	 * Translate a recording's sentences: the translations VocalStack already
+	 * Translate a transcription's sentences: the translations VocalStack already
 	 * holds (`transcript?lang=`), then the rest in batches of 40.
 	 *
-	 * @param VocalStack $client       The client (the owner's, or a listener's).
-	 * @param string     $recording_id Recording.
-	 * @param string     $lang         Language code.
+	 * @param VocalStack $client           The client (the owner's, or a listener's).
+	 * @param string     $transcription_id Transcription.
+	 * @param string     $lang             Language code.
 	 * @return array<string, mixed>
 	 */
-	private static function translate( VocalStack $client, string $recording_id, string $lang ): array {
-		$transcript = $client->recordings->transcript( $recording_id, null, $lang );
+	private static function translate( VocalStack $client, string $transcription_id, string $lang ): array {
+		$transcript = $client->transcriptions->transcript( $transcription_id, null, $lang );
 		$sentences  = array();
 		$missing    = array();
 		foreach ( (array) ( $transcript['sentences'] ?? array() ) as $s ) {
@@ -421,7 +405,7 @@ final class PlayerRoutes {
 			);
 		}
 		foreach ( array_chunk( $missing, 40 ) as $chunk ) {
-			$answer = $client->recordings->translation( $recording_id, $lang, $chunk );
+			$answer = $client->transcriptions->translation( $transcription_id, $lang, $chunk );
 			foreach ( (array) ( $answer['translations'] ?? array() ) as $id => $text ) {
 				if ( isset( $sentences[ (int) $id ] ) && '' !== trim( (string) $text ) ) {
 					$sentences[ (int) $id ]['text']       = trim( (string) $text );
@@ -435,7 +419,7 @@ final class PlayerRoutes {
 		$clips = array();
 		if ( $voice ) {
 			// The default voice's row: which lines were spoken in pieces, and a digest per line for caching.
-			foreach ( $client->recordings->voice( $recording_id, $lang ) as $row ) {
+			foreach ( $client->transcriptions->voice( $transcription_id, $lang ) as $row ) {
 				if ( ( $row['lang'] ?? '' ) === $lang && '' === (string) ( $row['voiceKey'] ?? '' ) ) {
 					$clips = array(
 						'parts' => (array) ( $row['clipParts'] ?? array() ),
@@ -447,11 +431,11 @@ final class PlayerRoutes {
 			}
 		}
 		return array(
-			'lang'        => $lang,
-			'recordingId' => $recording_id,
-			'voice'       => $voice,
-			'clips'       => (object) $clips,
-			'sentences'   => array_values( $sentences ),
+			'lang'            => $lang,
+			'transcriptionId' => $transcription_id,
+			'voice'           => $voice,
+			'clips'           => (object) $clips,
+			'sentences'       => array_values( $sentences ),
 		);
 	}
 

@@ -20,15 +20,33 @@ final class FakeTranscriber implements Transcriber {
 	public array $calls = array();
 
 	/** @var array<string, mixed> What job() answers. */
-	public array $job = array( 'state' => 'queued', 'progress' => array( 'pct' => 0 ) );
+	public array $job = array(
+		'state'    => 'queued',
+		'progress' => array( 'pct' => 0 ),
+	);
 
 	/** @var array<string, mixed> What transcript() answers. */
 	public array $transcript = array(
 		'lang'      => 'en',
 		'sentences' => array(
-			array( 'start' => 0.0, 'end' => 2.0, 'speaker' => 0, 'text' => 'Hello there.' ),
-			array( 'start' => 2.1, 'end' => 4.0, 'speaker' => 0, 'text' => 'How are you?' ),
-			array( 'start' => 4.2, 'end' => 6.0, 'speaker' => 1, 'text' => 'Fine, thanks.' ),
+			array(
+				'start'   => 0.0,
+				'end'     => 2.0,
+				'speaker' => 0,
+				'text'    => 'Hello there.',
+			),
+			array(
+				'start'   => 2.1,
+				'end'     => 4.0,
+				'speaker' => 0,
+				'text'    => 'How are you?',
+			),
+			array(
+				'start'   => 4.2,
+				'end'     => 6.0,
+				'speaker' => 1,
+				'text'    => 'Fine, thanks.',
+			),
 		),
 	);
 
@@ -86,25 +104,22 @@ final class FakeTranscriber implements Transcriber {
 	public function start( Source $source, string $name, string $idempotency_key, array $settings = array() ): array {
 		$this->calls[] = array( 'start', compact( 'source', 'name', 'idempotency_key', 'settings' ) );
 		$this->maybe_fail();
-		return array(
-			'recordingId'     => 'rec_1',
-			'transcriptionId' => 'tr_1',
-		);
+		return array( 'transcriptionId' => 'tr_1' );
 	}
 
-	public function job( string $recording_id ): array {
-		$this->calls[] = array( 'job', $recording_id );
+	public function job( string $transcription_id ): array {
+		$this->calls[] = array( 'job', $transcription_id );
 		$this->maybe_fail();
 		return $this->job;
 	}
 
-	public function stop( string $recording_id ): void {
-		$this->calls[] = array( 'stop', $recording_id );
+	public function stop( string $transcription_id ): void {
+		$this->calls[] = array( 'stop', $transcription_id );
 		$this->maybe_fail();
 	}
 
-	public function transcript( string $recording_id ): array {
-		$this->calls[] = array( 'transcript', $recording_id );
+	public function transcript( string $transcription_id ): array {
+		$this->calls[] = array( 'transcript', $transcription_id );
 		$this->maybe_fail();
 		return $this->transcript;
 	}

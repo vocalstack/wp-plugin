@@ -1,5 +1,5 @@
 /**
- * A recording's audio and its timed transcript, kept in step: click a
+ * A transcription's audio and its timed transcript, kept in step: click a
  * sentence to seek, the sentence being spoken is highlighted.
  */
 import { Button, Icon, Spinner, TextControl } from '@wordpress/components';
@@ -10,23 +10,23 @@ import { nameSpeaker, seg, vs } from '../lib/api';
 import { apiUrl } from '../lib/config';
 import { clock } from '../lib/format';
 
-/** A playable URL for a recording: its delivery audio, with a media token. */
-export function useAudioUrl( recordingId, enabled = true ) {
+/** A playable URL for a transcription: its delivery audio, with a media token. */
+export function useAudioUrl( transcriptionId, enabled = true ) {
 	const [ url, setUrl ] = useState( null );
 	const [ error, setError ] = useState( '' );
 	useEffect( () => {
 		setUrl( null );
 		setError( '' );
-		if ( ! recordingId || ! enabled ) return;
+		if ( ! transcriptionId || ! enabled ) return;
 		let live = true;
-		vs( `recordings/${ seg( recordingId ) }/media-token` ).then(
-			( r ) => live && setUrl( `${ apiUrl }/v1/recordings/${ seg( recordingId ) }/audio?kind=delivery&format=mp3&media=${ encodeURIComponent( r.token ) }` ),
+		vs( `transcriptions/${ seg( transcriptionId ) }/media-token` ).then(
+			( r ) => live && setUrl( `${ apiUrl }/v1/transcriptions/${ seg( transcriptionId ) }/audio?kind=delivery&format=mp3&media=${ encodeURIComponent( r.token ) }` ),
 			( e ) => live && setError( e.message )
 		);
 		return () => {
 			live = false;
 		};
-	}, [ recordingId, enabled ] );
+	}, [ transcriptionId, enabled ] );
 	return { url, error };
 }
 
@@ -148,23 +148,23 @@ export function Transcript( { sentences, labelled, names = {}, time = 0, onSeek,
 }
 
 /**
- * A recording's player and transcript, loading both. `lang` reads a translation.
+ * A transcription's player and transcript, loading both. `lang` reads a translation.
  */
-export function RecordingView( { recordingId, transcriptionId, lang, canName = true, playable = true } ) {
+export function TranscriptView( { transcriptionId, lang, canName = true, playable = true } ) {
 	const audioRef = useRef();
 	const [ time, setTime ] = useState( 0 );
 	const [ data, setData ] = useState( null );
 	const [ error, setError ] = useState( '' );
-	const { url, error: audioError } = useAudioUrl( recordingId, playable );
+	const { url, error: audioError } = useAudioUrl( transcriptionId, playable );
 
 	const load = useCallback( async () => {
 		setError( '' );
 		try {
-			setData( await vs( `recordings/${ seg( recordingId ) }/transcript`, { query: { lang } } ) );
+			setData( await vs( `transcriptions/${ seg( transcriptionId ) }/transcript`, { query: { lang } } ) );
 		} catch ( e ) {
 			setError( e.message );
 		}
-	}, [ recordingId, lang ] );
+	}, [ transcriptionId, lang ] );
 
 	useEffect( () => {
 		setData( null );
@@ -174,7 +174,7 @@ export function RecordingView( { recordingId, transcriptionId, lang, canName = t
 	const names = useMemo( () => Object.fromEntries( ( data?.speakers ?? [] ).map( ( s, i ) => [ s.index ?? s.speaker ?? i, s.name ] ) ), [ data ] );
 
 	const rename = async ( index, name ) => {
-		await nameSpeaker( { transcriptionId, recordingId, index }, name );
+		await nameSpeaker( { transcriptionId, index }, name );
 		await load();
 	};
 

@@ -1,15 +1,15 @@
 /**
- * One broadcast: its recordings, settings, audio sources and sharing.
+ * One broadcast: its transcriptions, settings, audio sources and sharing.
  */
 import { Button, Notice, Spinner, TabPanel, TextControl } from '@wordpress/components';
 import { useCallback, useEffect, useState } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
 import { lock } from '@wordpress/icons';
 import { errorMessage, seg, vs } from '../lib/api';
-import { broadcastRow, INFO, liveRecordingOf } from '../lib/broadcast';
+import { broadcastRow, INFO, liveTranscriptionOf } from '../lib/broadcast';
 import { bareUrl, captureClass, CAPTURE_LABEL, clock, whenLong } from '../lib/format';
 import { navigate } from '../lib/router';
-import { RecordingView } from '../components/Player';
+import { TranscriptView } from '../components/Player';
 import ShareLinks from '../components/ShareLinks';
 import { Chip, CopyField, ErrorNotice, LangLabel, PageHeader, PurgeModal, RowIcon } from '../components/ui';
 import { BroadcastFields, broadcastBody, CODE_MIN } from './NewBroadcast';
@@ -17,7 +17,7 @@ import { BackLink, LiveControls } from './TranscriptionDetail';
 
 const POLL_MS = 5000;
 
-function Recordings( { broadcast } ) {
+function Transcriptions( { broadcast } ) {
 	const [ items, setItems ] = useState( null );
 	const [ cursor, setCursor ] = useState( null );
 	const [ open, setOpen ] = useState( null );
@@ -26,8 +26,8 @@ function Recordings( { broadcast } ) {
 	const load = useCallback(
 		async ( next = null ) => {
 			try {
-				const r = await vs( `broadcasts/${ seg( broadcast.id ) }/recordings`, { query: { limit: 25, cursor: next } } );
-				setItems( ( prev ) => ( next ? [ ...( prev ?? [] ), ...( r.recordings ?? [] ) ] : r.recordings ?? [] ) );
+				const r = await vs( 'transcriptions', { query: { broadcast: broadcast.id, limit: 25, cursor: next } } );
+				setItems( ( prev ) => ( next ? [ ...( prev ?? [] ), ...( r.transcriptions ?? [] ) ] : r.transcriptions ?? [] ) );
 				setCursor( r.nextCursor ?? null );
 			} catch ( e ) {
 				setError( errorMessage( e ) );
@@ -39,7 +39,7 @@ function Recordings( { broadcast } ) {
 
 	useEffect( () => {
 		load();
-	}, [ load, broadcast.recordingCount ] );
+	}, [ load, broadcast.transcriptionCount ] );
 
 	if ( error ) return <ErrorNotice error={ error } />;
 	if ( ! items ) return <Spinner />;
@@ -64,20 +64,20 @@ function Recordings( { broadcast } ) {
 					return (
 						<li key={ r.id } className="vsa-row">
 							<div className="vsa-row__main" role="button" tabIndex={ 0 } aria-expanded={ expanded } onClick={ () => setOpen( expanded ? null : r.id ) } onKeyDown={ ( e ) => ( e.key === 'Enter' || e.key === ' ' ) && ( e.preventDefault(), setOpen( expanded ? null : r.id ) ) }>
-								<RowIcon kind={ r.kind === 'upload' ? 'music' : 'broadcast' } />
+								<RowIcon kind={ r.live ? 'broadcast' : 'music' } />
 								<div className="vsa-row__text">
 									<div className="vsa-row__title">
-										<span className="vsa-row__name">{ r.title?.trim() || whenLong( r.startedAt ) }</span>
+										<span className="vsa-row__name">{ r.title?.trim() || r.name || whenLong( r.startedAt ?? r.createdAt ) }</span>
 										{ [ 'live', 'paused' ].includes( r.state ) && <Chip tone="live">{ r.state === 'live' ? __( 'LIVE', 'vocalstack' ) : __( 'PAUSED', 'vocalstack' ) }</Chip> }
 									</div>
-									<div className="vsa-row__sub">{ whenLong( r.startedAt ) }</div>
+									<div className="vsa-row__sub">{ whenLong( r.startedAt ?? r.createdAt ) }</div>
 								</div>
-								<span className="vsa-row__len">{ r.mediaDurationS ? clock( r.mediaDurationS ) : '—' }</span>
+								<span className="vsa-row__len">{ r.durationS ? clock( r.durationS ) : '—' }</span>
 								<Button
 									variant="link"
 									onClick={ ( e ) => {
 										e.stopPropagation();
-										navigate( `/transcriptions/${ r.transcriptionId }` );
+										navigate( `/transcriptions/${ r.id }` );
 									} }
 								>
 									{ __( 'Open transcription', 'vocalstack' ) }
@@ -85,7 +85,7 @@ function Recordings( { broadcast } ) {
 							</div>
 							{ expanded && (
 								<div className="vsa-row__detail">
-									<RecordingView recordingId={ r.id } transcriptionId={ r.transcriptionId } playable={ [ 'ended', 'finalized' ].includes( r.state ) } />
+									<TranscriptView transcriptionId={ r.id } playable={ [ 'ended', 'finalized' ].includes( r.state ) } />
 								</div>
 							) }
 						</li>
@@ -107,7 +107,7 @@ function Sources( { broadcast, onChange } ) {
 	const [ checks, setChecks ] = useState( {} );
 	const [ busy, setBusy ] = useState( '' );
 	const [ error, setError ] = useState( '' );
-	const live = liveRecordingOf( broadcast );
+	const live = liveTranscriptionOf( broadcast );
 
 	const run = async ( key, fn ) => {
 		setBusy( key );
@@ -131,7 +131,7 @@ function Sources( { broadcast, onChange } ) {
 		<div className="vsa-sources">
 			<p className="vsa-muted">{ __( 'An audio source is a stream VocalStack pulls and transcribes live: a YouTube live, an Icecast or HLS radio stream, or an RTMP feed.', 'vocalstack' ) }</p>
 			<ErrorNotice error={ error } onRemove={ () => setError( '' ) } />
-			{ live && <LiveControls recording={ live } onChange={ onChange } /> }
+			{ live && <LiveControls transcriptionId={ live.transcriptionId } state={ live.state } onChange={ onChange } /> }
 			<ul className="vsa-list is-compact">
 				{ ( broadcast.audioSources ?? [] ).map( ( source ) => {
 					const result = checks[ source.id ];
@@ -155,10 +155,10 @@ function Sources( { broadcast, onChange } ) {
 										size="compact"
 										disabled={ Boolean( busy ) || Boolean( live ) }
 										isBusy={ busy === `start:${ source.id }` }
-										title={ live ? __( 'A recording is already on air.', 'vocalstack' ) : undefined }
+										title={ live ? __( 'A transcription is already on air.', 'vocalstack' ) : undefined }
 										onClick={ () =>
 											run( `start:${ source.id }`, async () => {
-												await vs( `broadcasts/${ seg( broadcast.id ) }/recordings`, { method: 'POST', idempotent: true, data: { audioSource: source.id } } );
+												await vs( `broadcasts/${ seg( broadcast.id ) }/record`, { method: 'POST', idempotent: true, data: { audioSource: source.id } } );
 												onChange();
 											} )
 										}
@@ -276,7 +276,7 @@ export default function BroadcastDetail( { id } ) {
 		load();
 	}, [ load ] );
 
-	const live = b ? liveRecordingOf( b ) : null;
+	const live = b ? liveTranscriptionOf( b ) : null;
 	useEffect( () => {
 		if ( ! live ) return;
 		const timer = setInterval( load, POLL_MS );
@@ -345,7 +345,7 @@ export default function BroadcastDetail( { id } ) {
 							<Button variant="primary" onClick={ () => navigate( `/live/${ id }` ) } disabled={ Boolean( busy ) }>
 								{ live ? __( 'Take over live', 'vocalstack' ) : __( 'Go live', 'vocalstack' ) }
 							</Button>
-						<Button variant="secondary" onClick={ () => act( 'archive', () => navigate( '/broadcasts' ) ) } isBusy={ busy === 'archive' } disabled={ Boolean( busy ) || Boolean( live ) } title={ live ? __( 'Stop the live recording before archiving.', 'vocalstack' ) : undefined }>
+						<Button variant="secondary" onClick={ () => act( 'archive', () => navigate( '/broadcasts' ) ) } isBusy={ busy === 'archive' } disabled={ Boolean( busy ) || Boolean( live ) } title={ live ? __( 'Stop the live transcription before archiving.', 'vocalstack' ) : undefined }>
 							{ __( 'Archive', 'vocalstack' ) }
 						</Button>
 						</>
@@ -353,11 +353,11 @@ export default function BroadcastDetail( { id } ) {
 				}
 			/>
 			<ErrorNotice error={ notice } onRemove={ () => setNotice( '' ) } />
-			{ live && <LiveControls recording={ live } onChange={ load } /> }
+			{ live && <LiveControls transcriptionId={ live.transcriptionId } state={ live.state } onChange={ load } /> }
 			<TabPanel
 				className="vsa-tabs"
 				tabs={ [
-					{ name: 'recordings', title: __( 'Recordings', 'vocalstack' ) },
+					{ name: 'transcriptions', title: __( 'Transcriptions', 'vocalstack' ) },
 					{ name: 'sources', title: __( 'Sources', 'vocalstack' ) },
 					{ name: 'settings', title: __( 'Settings', 'vocalstack' ) },
 					{ name: 'share', title: __( 'Share', 'vocalstack' ) },
@@ -365,7 +365,7 @@ export default function BroadcastDetail( { id } ) {
 			>
 				{ ( tab ) => (
 					<div className="vsa-tab">
-						{ tab.name === 'recordings' && <Recordings broadcast={ b } /> }
+						{ tab.name === 'transcriptions' && <Transcriptions broadcast={ b } /> }
 						{ tab.name === 'sources' && <Sources broadcast={ b } onChange={ load } /> }
 						{ tab.name === 'settings' && <Settings broadcast={ b } onSaved={ setB } /> }
 						{ tab.name === 'share' && (

@@ -22,7 +22,7 @@ final class JobsTest extends TestCase {
 		$data = Jobs::start( $id );
 
 		$this->assertSame( 'queued', $data['state'] );
-		$this->assertSame( 'rec_1', $data['recordingId'] );
+		$this->assertArrayNotHasKey( 'recordingId', $data );
 		$this->assertSame( 'tr_1', $data['transcriptionId'] );
 		$source = $this->vs->calls[0][1]['source'];
 		$this->assertTrue( $source->is_file() );
@@ -73,15 +73,33 @@ final class JobsTest extends TestCase {
 	}
 
 	public function test_languages_and_speakers_are_saved(): void {
-		$id                    = $this->audio();
-		$this->vs->transcript  = array(
+		$id                   = $this->audio();
+		$this->vs->transcript = array(
 			'lang'          => 'en',
 			'speakerLabels' => 'auto',
 			'speakers'      => array(),
 			'sentences'     => array(
-				array( 'start' => 0.0, 'end' => 1.0, 'speaker' => 0, 'text' => 'Hello.', 'language' => 'en' ),
-				array( 'start' => 1.0, 'end' => 2.0, 'speaker' => 1, 'text' => 'Hola.', 'language' => 'es' ),
-				array( 'start' => 2.0, 'end' => 3.0, 'speaker' => 0, 'text' => 'How are you?', 'language' => 'en' ),
+				array(
+					'start'    => 0.0,
+					'end'      => 1.0,
+					'speaker'  => 0,
+					'text'     => 'Hello.',
+					'language' => 'en',
+				),
+				array(
+					'start'    => 1.0,
+					'end'      => 2.0,
+					'speaker'  => 1,
+					'text'     => 'Hola.',
+					'language' => 'es',
+				),
+				array(
+					'start'    => 2.0,
+					'end'      => 3.0,
+					'speaker'  => 0,
+					'text'     => 'How are you?',
+					'language' => 'en',
+				),
 			),
 		);
 		Jobs::start( $id );
@@ -98,7 +116,13 @@ final class JobsTest extends TestCase {
 			'lang'          => 'en',
 			'speakerLabels' => 'off',
 			'sentences'     => array(
-				array( 'start' => 0.0, 'end' => 1.0, 'speaker' => -1, 'text' => 'Hello.', 'language' => 'en' ),
+				array(
+					'start'    => 0.0,
+					'end'      => 1.0,
+					'speaker'  => -1,
+					'text'     => 'Hello.',
+					'language' => 'en',
+				),
 			),
 		);
 		Jobs::start( $id );
@@ -117,7 +141,12 @@ final class JobsTest extends TestCase {
 	}
 
 	public function test_start_refuses_images(): void {
-		$id = self::factory()->attachment->create_object( array( 'file' => 'a.jpg', 'post_mime_type' => 'image/jpeg' ) );
+		$id = self::factory()->attachment->create_object(
+			array(
+				'file'           => 'a.jpg',
+				'post_mime_type' => 'image/jpeg',
+			)
+		);
 		$this->assertWPError( Jobs::start( $id ) );
 	}
 
@@ -143,7 +172,10 @@ final class JobsTest extends TestCase {
 		$id = $this->audio();
 		Jobs::start( $id );
 
-		$this->vs->job = array( 'state' => 'transcribing', 'progress' => array( 'pct' => 40 ) );
+		$this->vs->job = array(
+			'state'    => 'transcribing',
+			'progress' => array( 'pct' => 40 ),
+		);
 		$data          = Jobs::refresh( $id );
 		$this->assertSame( 'transcribing', $data['state'] );
 		$this->assertSame( 40, $data['progress']['pct'] );
@@ -156,6 +188,37 @@ final class JobsTest extends TestCase {
 		$this->assertSame( "Hello there. How are you?\n\nFine, thanks.", $data['transcript'] );
 		$this->assertCount( 3, $data['sentences'] );
 		$this->assertSame( 'en', $data['language'] );
+	}
+
+	public function test_refresh_and_stop_use_the_transcription_id(): void {
+		$id = $this->audio();
+		Jobs::start( $id );
+		$this->vs->job = array( 'state' => 'transcribing' );
+		Jobs::refresh( $id );
+		Jobs::stop( $id );
+
+		$this->assertSame( array( 'job', 'tr_1' ), $this->vs->calls[1] );
+		$this->assertSame( array( 'stop', 'tr_1' ), $this->vs->calls[2] );
+	}
+
+	public function test_a_job_saved_with_a_recording_id_is_followed_by_its_transcription_id(): void {
+		$id = $this->audio();
+		update_post_meta(
+			$id,
+			Media::JOB,
+			array(
+				'recordingId'     => 'rec_old',
+				'transcriptionId' => 'tr_old',
+				'progress'        => array( 'pct' => 10 ),
+			)
+		);
+		update_post_meta( $id, Media::STATE, 'transcribing' );
+		$this->vs->job = array( 'state' => 'done' );
+
+		$data = Jobs::refresh( $id );
+
+		$this->assertSame( array( array( 'job', 'tr_old' ), array( 'transcript', 'tr_old' ) ), $this->vs->calls );
+		$this->assertSame( 'done', $data['state'] );
 	}
 
 	public function test_refresh_is_throttled(): void {
@@ -191,14 +254,28 @@ final class JobsTest extends TestCase {
 	}
 
 	public function test_a_job_started_in_another_workspace_says_so_in_plain_words(): void {
-		Workspace::remember( array( 'workspace' => array( 'id' => 'ws_old', 'name' => 'Old' ) ) );
+		Workspace::remember(
+			array(
+				'workspace' => array(
+					'id'   => 'ws_old',
+					'name' => 'Old',
+				),
+			)
+		);
 		$id = $this->audio();
 		Jobs::start( $id );
 		$this->assertSame( 'ws_old', get_post_meta( $id, Media::JOB, true )['workspaceId'] );
 
 		// Settings → Change: the site now holds a key of another workspace.
 		Settings::set_api_key( 'vs_key_elsewhere' );
-		Workspace::remember( array( 'workspace' => array( 'id' => 'ws_new', 'name' => 'New' ) ) );
+		Workspace::remember(
+			array(
+				'workspace' => array(
+					'id'   => 'ws_new',
+					'name' => 'New',
+				),
+			)
+		);
 		$this->vs->fail = new TranscriberError( 'not found', 'not_found', 404 );
 		$this->unthrottle( $id );
 		$data = Jobs::refresh( $id );
@@ -211,7 +288,14 @@ final class JobsTest extends TestCase {
 	}
 
 	public function test_a_job_deleted_in_vocalstack_says_so(): void {
-		Workspace::remember( array( 'workspace' => array( 'id' => 'ws_1', 'name' => 'Acme' ) ) );
+		Workspace::remember(
+			array(
+				'workspace' => array(
+					'id'   => 'ws_1',
+					'name' => 'Acme',
+				),
+			)
+		);
 		$id = $this->audio();
 		Jobs::start( $id );
 		$this->vs->fail = new TranscriberError( 'not found', 'not_found', 404 );

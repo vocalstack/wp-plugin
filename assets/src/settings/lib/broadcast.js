@@ -4,8 +4,8 @@
 import { __, sprintf } from '@wordpress/i18n';
 import { bareUrl, captureClass } from './format';
 
-/** The recording on air now, if any. */
-export const liveRecordingOf = ( b ) => ( [ 'live', 'paused', 'pending' ].includes( b?.currentRecording?.state ) ? b.currentRecording : null );
+/** The transcription on air now, if any. */
+export const liveTranscriptionOf = ( b ) => ( [ 'live', 'paused', 'pending' ].includes( b?.currentTranscription?.state ) ? b.currentTranscription : null );
 
 /** "Sat, 18 Oct · 09:38" */
 function recordingWhen( iso ) {
@@ -14,15 +14,15 @@ function recordingWhen( iso ) {
 }
 
 export function broadcastRow( b ) {
-	const live = liveRecordingOf( b );
-	const last = b.lastRecording ?? null;
+	const live = liveTranscriptionOf( b );
+	const last = b.lastTranscription ?? null;
 	const tile = live ? new Date() : last?.startedAt ? new Date( last.startedAt ) : null;
 	const fed = ( b.transcriptions ?? [] ).find( ( t ) => t.id === ( live ?? last )?.transcriptionId );
-	let tileTitle = __( 'No recordings yet', 'vocalstack' );
+	let tileTitle = __( 'No transcriptions yet', 'vocalstack' );
 	if ( live ) tileTitle = __( 'Recording now', 'vocalstack' );
 	else if ( last?.startedAt ) {
 		/* translators: %s: date and time */
-		tileTitle = sprintf( __( 'Last recording · %s', 'vocalstack' ), recordingWhen( last.startedAt ) );
+		tileTitle = sprintf( __( 'Last transcription · %s', 'vocalstack' ), recordingWhen( last.startedAt ) );
 	}
 	return {
 		id: b.id,
@@ -36,7 +36,7 @@ export function broadcastRow( b ) {
 		liveState: live ? ( live.state === 'paused' ? 'paused' : 'live' ) : null,
 		listeners: b.listenersNow ?? null,
 		chip: last || live ? { icon: captureClass( fed?.source ?? b.source ), label: ( live ?? last ).title?.trim() || recordingWhen( ( live ?? last ).startedAt ) } : null,
-		more: Math.max( 0, ( b.recordingCount ?? 0 ) - 1 ),
+		more: Math.max( 0, ( b.transcriptionCount ?? 0 ) - 1 ),
 		sortAt: b.lastRecordedAt ?? b.createdAt,
 		raw: b,
 	};

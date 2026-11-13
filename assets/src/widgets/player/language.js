@@ -1,10 +1,10 @@
 /**
- * "Listen in": hear and read a finished recording in another language.
+ * "Listen in": hear and read a finished transcription in another language.
  *
  * Choosing a language swaps the transcript for its translation and, where
  * VocalStack has a voice for the language, speaks it a sentence at a time
  * (VoiceQueue) from the line the listener was at. Original goes back to the
- * recording at the same place. A language with no voice keeps the original
+ * original audio at the same place. A language with no voice keeps the original
  * audio under the translated text.
  *
  * The languages offered are the site owner's: each translation is billed to
@@ -18,9 +18,9 @@ import VoiceQueue from '../shared/voice-queue';
  * @param {HTMLElement}           root   Widget root.
  * @param {Object}                config Widget configuration.
  * @param {Object|null}           view   The transcript (TranscriptView).
- * @param {HTMLMediaElement|null} media  The recording's own player.
- * @param {Object}                source How to reach the recording: `token()` (a media token, or ''),
- *                                       `recording()` (the id, for a broadcast); for a live broadcast
+ * @param {HTMLMediaElement|null} media  The transcription's own player.
+ * @param {Object}                source How to reach the transcription: `token()` (a media token, or ''),
+ *                                       `transcription()` (the id, for a broadcast); for a live broadcast
  *                                       `isLive()` and `live(lang)`.
  * @return {{ reset: Function, lang: Function }|null} Controls, or null without a selector.
  */
@@ -106,8 +106,8 @@ export default function languages( root, config, view, media, source ) {
 		select.disabled = true;
 		let data;
 		try {
-			const recording = source.recording?.() || '';
-			data = await api( config, 'widgets/player/translation', { params: { ticket: config.ticket, lang, recording } } );
+			const transcription = source.transcription?.() || '';
+			data = await api( config, 'widgets/player/translation', { params: { ticket: config.ticket, lang, transcription } } );
 		} catch ( error ) {
 			if ( mine === request ) {
 				status( line, error.message, true );
@@ -143,7 +143,7 @@ export default function languages( root, config, view, media, source ) {
 		try {
 			token = ( await source.token?.() ) || '';
 		} catch {}
-		queue.load( { api: config.api, recordingId: data.recordingId, lang, sentences: data.sentences, clips: data.clips || {}, media: token } );
+		queue.load( { api: config.api, transcriptionId: data.transcriptionId, lang, sentences: data.sentences, clips: data.clips || {}, media: token } );
 		if ( media ) {
 			media.pause();
 			// A video stays in view (paused); an audio player gives way to the spoken translation.
@@ -164,7 +164,7 @@ export default function languages( root, config, view, media, source ) {
 	speak.addEventListener( 'click', () => ( queue.playing ? queue.pause() : queue.resume() ) );
 
 	return {
-		/** A new recording (a broadcast moved on): back to the original. */
+		/** A new transcription (a broadcast moved on): back to the original. */
 		reset: () => {
 			original = null;
 			if ( current ) {

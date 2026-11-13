@@ -83,7 +83,7 @@ final class SdkTranscriber implements Transcriber {
 	 * Start a transcription from a URL, or by uploading the file.
 	 *
 	 * @param Source               $source          Where the audio comes from.
-	 * @param string               $name            The recording's name.
+	 * @param string               $name            The transcription's name.
 	 * @param string               $idempotency_key The same key never starts two jobs.
 	 * @param array<string, mixed> $settings        Transcription settings, by their wire names.
 	 * @throws TranscriberError On failure, or when the answer carries no job.
@@ -93,48 +93,45 @@ final class SdkTranscriber implements Transcriber {
 		if ( $settings ) {
 			$fields['settings'] = $settings;
 		}
-		$created      = $this->call(
+		$created          = $this->call(
 			fn() => $source->is_file()
 				? $this->vs->transcriptions->create( $fields, Upload::path( $source->path, $source->file_name ), $source->file_name, $idempotency_key )
 				: $this->vs->transcriptions->createFromUrl( $source->url, $fields, $idempotency_key )
 		);
-		$recording_id = (string) ( $created['job']['recordingId'] ?? '' );
-		if ( '' === $recording_id ) {
+		$transcription_id = (string) ( $created['id'] ?? $created['job']['transcriptionId'] ?? '' );
+		if ( '' === $transcription_id || empty( $created['job'] ) ) {
 			throw new TranscriberError( __( 'VocalStack did not start a job.', 'vocalstack' ), 'no_job' ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Sent as JSON, shown as text.
 		}
-		return array(
-			'recordingId'     => $recording_id,
-			'transcriptionId' => (string) ( $created['id'] ?? $created['job']['transcriptionId'] ?? '' ),
-		);
+		return array( 'transcriptionId' => $transcription_id );
 	}
 
 	/**
 	 * The job's state.
 	 *
-	 * @param string $recording_id The recording.
+	 * @param string $transcription_id The transcription.
 	 * @throws TranscriberError On failure.
 	 */
-	public function job( string $recording_id ): array {
-		return $this->call( fn() => $this->vs->jobs->get( $recording_id ) );
+	public function job( string $transcription_id ): array {
+		return $this->call( fn() => $this->vs->transcriptions->job( $transcription_id ) );
 	}
 
 	/**
 	 * Stop the job.
 	 *
-	 * @param string $recording_id The recording.
+	 * @param string $transcription_id The transcription.
 	 * @throws TranscriberError On failure.
 	 */
-	public function stop( string $recording_id ): void {
-		$this->call( fn() => $this->vs->recordings->stop( $recording_id, 'Stopped from WordPress' ) );
+	public function stop( string $transcription_id ): void {
+		$this->call( fn() => $this->vs->transcriptions->stop( $transcription_id, 'Stopped from WordPress' ) );
 	}
 
 	/**
 	 * The finished transcript.
 	 *
-	 * @param string $recording_id The recording.
+	 * @param string $transcription_id The transcription.
 	 * @throws TranscriberError On failure.
 	 */
-	public function transcript( string $recording_id ): array {
-		return $this->call( fn() => $this->vs->recordings->transcript( $recording_id ) );
+	public function transcript( string $transcription_id ): array {
+		return $this->call( fn() => $this->vs->transcriptions->transcript( $transcription_id ) );
 	}
 }
