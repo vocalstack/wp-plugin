@@ -4,7 +4,7 @@ Tags: transcription, captions, podcast, speech to text, subtitles
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.4.0
+Stable tag: 0.4.1
 License: MIT
 License URI: https://opensource.org/licenses/MIT
 
@@ -76,6 +76,9 @@ In Settings, press Change next to the workspace and pick another one in VocalSta
 One-click Connect needs a site served over https (or a local site on localhost). On a plain http site, paste an API key.
 
 == Changelog ==
+
+= 0.4.1 =
+* Built on the VocalStack PHP SDK 2.3.
 
 = 0.4.0 =
 * Works with VocalStack's API where a transcription is one continuous transcript: everything the plugin reads, starts, pauses, stops, exports and plays is addressed by the transcription. Needs this version from the day VocalStack drops recordings from its API.

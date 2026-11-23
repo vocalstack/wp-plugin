@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "7366cc0ccb094e42d24bb511ad669e4f",
+    "content-hash": "efddb8a1b63e11c8a080cd207eae8379",
     "packages": [
         {
             "name": "vocalstack/sdk",
-            "version": "v2.2.0",
+            "version": "v2.3.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/vocalstack/php-sdk.git",
-                "reference": "8dcff02efe6817baa7e04fc562b6e339a53aaac4"
+                "reference": "bd5bc6a07b08fe86f2d2df523ee1d7784113b6a3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/vocalstack/php-sdk/zipball/8dcff02efe6817baa7e04fc562b6e339a53aaac4",
-                "reference": "8dcff02efe6817baa7e04fc562b6e339a53aaac4",
+                "url": "https://api.github.com/repos/vocalstack/php-sdk/zipball/bd5bc6a07b08fe86f2d2df523ee1d7784113b6a3",
+                "reference": "bd5bc6a07b08fe86f2d2df523ee1d7784113b6a3",
                 "shasum": ""
             },
             "require": {
@@ -63,7 +63,7 @@
                 "issues": "https://github.com/vocalstack/php-sdk/issues",
                 "source": "https://github.com/vocalstack/php-sdk"
             },
-            "time": "2026-11-13T16:22:52+00:00"
+            "time": "2026-11-14T18:29:31+00:00"
         }
     ],
     "packages-dev": [
